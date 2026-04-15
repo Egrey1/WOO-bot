@@ -23,6 +23,10 @@ class Currency:
     def all(cls) -> List['Currency']: # type: ignore
         """"""
     
+    @classmethod
+    def create(cls):
+        """"""
+        
     def edit(self, name: str):
         """"""
 

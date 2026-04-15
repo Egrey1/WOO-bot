@@ -42,6 +42,21 @@ class Currency:
             logging.error(f'Ошибка в Currency.all: {e}')
             return []
     
+    @classmethod
+    def create(cls, name: str):
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               INSERT OR IGNORE INTO currencies (name)
+                               VALUES (?)
+                               """, (name, ))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(f'Ошибка в Resource.create: {e}')
+            raise e
+    
     def edit(self, name: str):
         try:
             with deps.main_db as connect:
@@ -100,7 +115,7 @@ class Resource:
                 cursor.execute("""
                                INSERT OR IGNORE INTO resources (name)
                                VALUES (?)
-                               """, (name))
+                               """, (name, ))
                 connect.commit()
                 cursor.close()
         except Exception as e:
