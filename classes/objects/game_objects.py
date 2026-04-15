@@ -1,4 +1,4 @@
-from ..library import deps, logging, List, Role
+from ..library import deps, logging, List, Role, Embed, Tuple
 
 class NotFound(Exception):
     def __init__(self, *args: object) -> None:
@@ -42,7 +42,7 @@ class Currency:
             logging.error(f'Ошибка в Currency.all: {e}')
             return []
     
-    def addedit(self, name: str):
+    def edit(self, name: str):
         try:
             with deps.main_db as connect:
                 cursor = connect.cursor()
@@ -51,7 +51,7 @@ class Currency:
                                VALUES (?, ?)
                                """, (self.id, name))
         except Exception as e:
-            logging.error(f'Ошибка в Currency.addedit: {e}')
+            logging.error(f'Ошибка в Currency.edit: {e}')
         
 
 class Resource:
@@ -92,16 +92,31 @@ class Resource:
             logging.error(f'Ошибка в Resource.all: {e}')
             return []
     
-    def addedit(self, name: str):
+    @classmethod
+    def create(cls, name: str):
         try:
             with deps.main_db as connect:
                 cursor = connect.cursor()
                 cursor.execute("""
-                               INSERT OR REPLACE INTO resources (id, name)
-                               VALUES (?, ?)
+                               INSERT OR IGNORE INTO resources (name)
+                               VALUES (?)
+                               """, (name))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(f'Ошибка в Resource.create: {e}')
+            raise e
+        
+    def edit(self, name: str):
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               UPDATE resources 
+                               SET name = ?
                                """, (self.id, name))
         except Exception as e:
-            logging.error(f'Ошибка в Resource.addedit: {e}')
+            logging.error(f'Ошибка в Resource.edit: {e}')
 
 class ShopItem:
     def __init__(self, id_: int | str):
@@ -145,36 +160,134 @@ class ShopItem:
             logging.error(f'Ошибка в ShopItem.all: {e}')
             return []
     
-    def addedit(self, 
-                name: str | None = None, 
-                description: str | None = None, 
-                cost: int | None = None, 
-                required_role_id: Role | int | None = None, 
-                currency: str | None = None):
-        required_role_id = required_role_id.id if isinstance(required_role_id, Role) else required_role_id
+    @classmethod
+    def create(cls,
+               name: str,
+               description: str,
+               cost: int,
+               required_role: Role | int,
+               currency: str | int):
         try:
             with deps.main_db as connect:
                 cursor = connect.cursor()
-                if all([name, description, cost, required_role_id, currency]):
-                    cursor.execute("""
-                                   INSERT OR REPLACE INTO resources (id, name, description, cost, required_role, currency)
-                                   VALUES (?, ?, ?, ?, ?, ?)
-                                   """, (self.id, name, description, cost, required_role_id, currency))
-                else:
-                    arr = [
-                        'name' if name else None,
-                        'description' if description else None,
-                        'cost' if cost else None,
-                        'required_role' if required_role_id else None,
-                        'currency' if currency else None
-                    ]
-                    set_format = ','.join([f'{n} = ?' for n in arr if n is not None])
-                    arr = [name, description, cost, required_role_id, currency]
-                    arr = tuple([i for i in arr if i is not None] + [self.id])
-                    cursor.execute(f"""
-                                   UPDATE shop
-                                   SET {set_format}
-                                   WHERE id = ?
-                                   """, (arr))
+                cursor.execute("""
+                               INSERT INTO shop (name, description, cost, required_role, currency)
+                               VALUES (?, ?, ?, ?, ?)
+                               """, (name, description, cost, required_role, currency))
+                connect.commit()
+                cursor.close()
         except Exception as e:
-            logging.error(f'Ошибка в Resource.addedit: {e}')
+            logging.error(f'Ошибка в ShopItem.create: {e}')
+            raise e
+
+
+    def edit(self, **kwargs):
+        kwargs['required_role'] = kwargs.get('required_role', None).id if isinstance(kwargs.get('required_role', None), Role) else kwargs.get('required_role', None) # type: ignore
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+                arr = [name for name in kwargs.keys()]
+                set_format = ','.join([f'{n} = ?' for n in arr if n is not None])
+                arr = tuple([i for i in kwargs.values() if i is not None] + [self.id])
+                cursor.execute(f"""
+                                UPDATE shop
+                                SET {set_format}
+                                WHERE id = ?
+                                """, (arr))
+        except Exception as e:
+            logging.error(f'Ошибка в Resource.edit: {e}')
+    
+    def get_embed(self) -> Embed:
+        embed = Embed(title=f'{self.name} - {self.cost}{deps.MAIN_CURRENCY_ID}', description=self.description)
+        embed.add_field('Требуеиые роли', f'<&{self.required_role_id}>', inline=False)
+        return embed
+    
+    def get_embed_field_params(self) -> Tuple[str, str]:
+        desc = self.description[:200]
+        return (self.name, desc if desc == self.description[:200] else desc + '...')
+        
+    
+class _UserBalance:
+    def __init__(self, id_: int | str):
+        self.id = id_
+        self._dict: dict = {}
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               SELECT balance
+                               FROM users
+                               WHERE id = ?
+                               """, (self.id, ))
+                d = dict(cursor.fetchone())
+                for name, amount in d.keys():
+                    self._dict[name] = amount
+                cursor.close()
+        except Exception as e:
+            logging.warning(f'Ошибка в UserBalance.init: {e}')
+    
+    def __getitem__(self, key: str | int):
+        self._dict[key]
+
+    def __setitem__(self, key: str | int, value: int):
+        self._dict[key] = value
+        set_string = ';'.join([f'{name}:{amount}' for name, amount in self._dict.items()])
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               UPDATE balance
+                               SET balance = ?
+                               WHERE id = ?
+                               """, (set_string, self.id))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(f'Ошибка в UserBalance.setitem: {e}')
+            raise e
+    
+    def __getattribute__(self, name: str):
+        self._dict.__getattribute__(name)
+
+class _UserResources:
+    def __init__(self, id_: int | str):
+        self.id = id_
+        self._dict: dict = {}
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               SELECT resources
+                               FROM users
+                               WHERE id = ?
+                               """, (self.id, ))
+                d = dict(cursor.fetchone())
+                for name, amount in d.keys():
+                    self._dict[name] = amount
+                cursor.close()
+        except Exception as e:
+            logging.warning(f'Ошибка в UserResources.init: {e}')
+    
+    def __getitem__(self, key: str | int):
+        self._dict[key]
+        
+    def __setitem__(self, key: str | int, value: int):
+        self._dict[key] = value
+        set_string = ';'.join([f'{name}:{amount}' for name, amount in self._dict.items()])
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               UPDATE resources
+                               SET resources = ?
+                               WHERE id = ?
+                               """, (set_string, self.id))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(f'Ошибка в UserResources.setitem: {e}')
+            raise e
+    
+    def __getattribute__(self, name: str):
+        self._dict.__getattribute__(name)
+    

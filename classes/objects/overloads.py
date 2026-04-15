@@ -29,51 +29,10 @@ class NewConnection(Connection):
 
 class NewUser(_UserTag):
     def get_balance(self) -> dict[str, int]:
-        try:
-            with deps.main_db as connect:
-                cursor = connect.cursor()
-                cursor.execute("""
-                               SELECT balance
-                               FROM users
-                               WHERE id = ?
-                               """, (self.id, ))
-                fetch = cursor.fetchone()
-                cursor.close()
-                if not fetch:
-                    connect.autocreate(self.id)
-                    return self.get_balance()
-                fetch = fetch['balance'].split(';')
-                d: dict[str, int] = {}
-                for bal in fetch:
-                    currency, amount = bal.split(':')
-                    d[currency] = int(amount)
-                return d
-        except Exception as e:
-            logging.error(f'Ошибка в NewUser.get_balance: {e}')
-            raise e
+        return deps._UserBalance(self.id) # type: ignore То же самое
+    
     def get_resources(self) -> dict[str, int]:
-        try:
-            with deps.main_db as connect:
-                cursor = connect.cursor()
-                cursor.execute("""
-                               SELECT resources
-                               FROM users
-                               WHERE id = ?
-                               """, (self.id, ))
-                fetch = cursor.fetchone()
-                cursor.close()
-                if not fetch:
-                    connect.autocreate(self.id)
-                    return self.get_balance()
-                fetch = fetch['resources'].split(';')
-                d: dict[str, int] = {}
-                for bal in fetch:
-                    currency, amount = bal.split(':')
-                    d[currency] = int(amount)
-                return d
-        except Exception as e:
-            logging.error(f'Ошибка в NewUser.get_resources: {e}')
-            raise e
+        return deps._UserResources(self.id) # type: ignore То же самое
 
 class NewRole(Role):
     def get_role_information(self) -> Tuple[dt.time, int, str, List[Tuple[str, int]]] | None:
@@ -102,43 +61,27 @@ class NewRole(Role):
                 )
         except Exception as e:
             logging.error(f'Ошибка в NewRole.get_role_information: {e}')
-    def addedit_role_information(
+    
+    def edit_role_information(
             self, 
-            cooldown: dt.time | str = None,  # pyright: ignore[reportArgumentType]
-            earning: int | str = None,  # pyright: ignore[reportArgumentType]
-            currency: str = None,  # pyright: ignore[reportArgumentType]
-            resources: List[Tuple[str, int]] | str = None # pyright: ignore[reportArgumentType]
-            ) -> None:  # pyright: ignore[reportArgumentType]
-            if isinstance(cooldown, dt.time):
-                cooldown = cooldown.isoformat()
-            resources = ';'.join([f'{name}:{amount}' for name, amount in resources]) if resources is not None else None # pyright: ignore[reportAssignmentType]
+            **kwargs
+            ) -> None:  
+            if isinstance(kwargs.get('cooldown', None), dt.time):
+                kwargs['cooldown'] = kwargs['cooldown'].isoformat()
+                
+            kwargs['resources'] = ';'.join([f'{name}:{amount}' for name, amount in kwargs['resources']]) if kwargs['resources'] is not None else None 
 
-            if not any([cooldown, earning, currency, resources]):
+            if not any(kwargs.values()):
                 return
 
-            arr = [
-                'cooldown' if cooldown else None, 
-                'earning' if earning else None, 
-                'currency' if currency else None, 
-                'resources' if resources else None
-            ]
+
+
+            arr = [name for name in kwargs.keys()]
 
             set_format = ','.join([f'{name} = ?' for name in [i for i in arr if i is not None]])
-            arr = [
-                cooldown, earning, currency, resources
-            ]
-            arr = tuple([i for i in arr if i is not None] + [self.id])
+            
+            arr = tuple([i for i in kwargs.values() if i is not None] + [self.id])
             try:
-                if all([cooldown, earning, currency, resources]):
-                    with deps.main_db as connect:
-                        cursor = connect.cursor()
-                        cursor.execute("""
-                                       INSERT OR REPLACE INTO roles (id, cooldown, earning, currency, resources)
-                                       VALUES (?, ?, ?, ?, ?)
-                                       """, (self.id, cooldown, earning, currency, resources))
-                        connect.commit()
-                        cursor.close()
-                        return
                 with deps.main_db as connect:
                     cursor = connect.cursor()
                     cursor.execute(f"""
@@ -150,3 +93,25 @@ class NewRole(Role):
                     cursor.close()
             except Exception as e:
                 logging.error(f'Ошибка в NewRole.addedit_role_information: {e}')
+    
+    def create_role_information(
+            self, 
+            cooldown: dt.time | str, 
+            earning: int | str, 
+            currency: str, 
+            resources: List[Tuple[str, int]] | str 
+        ) -> None:
+        try:
+            with deps.main_db as connect:
+                cursor = connect.cursor()
+
+                cursor.execute("""
+                               INSERT INTO roles (id, cooldown, earning, currency, resources)
+                               VALUES (?, ?, ?, ?, ?)
+                               """, (self.id, cooldown, earning, currency, resources))
+                connect.commit()
+                cursor.close()
+        except Exception as e: 
+            logging.error(f'Ошибка в NewRole.create_role_information: {e}')
+            raise e
+        
