@@ -10,71 +10,952 @@ PREFIX: tuple[str]
 TOKEN: str
 
 main_db: Connection
+"""
+Главное подключение к SQLite-базе данных `main.db`.
+
+База данных используется как единое хранилище экономической системы бота.
+В проекте предполагается работа только с одним Discord-сервером, поэтому
+отдельная таблица серверов не используется.
+
+Схема таблиц:
+    `users`
+        Хранит пользователей, которых уже видел бот.
+        Поля:
+            `id INTEGER PRIMARY KEY`
+                Discord ID пользователя.
+            `username TEXT`
+                Имя пользователя на момент сохранения.
+            `display_name TEXT`
+                Отображаемое имя пользователя на момент сохранения.
+            `created_at TEXT`
+                Дата создания записи. Формат: `YYYY-MM-DD HH:MM:SS`.
+            `updated_at TEXT`
+                Дата последнего обновления записи. Формат: `YYYY-MM-DD HH:MM:SS`.
+
+    `currencies`
+        Хранит доступные валюты сервера.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Внутренний идентификатор валюты.
+            `name TEXT UNIQUE`
+                Уникальное имя валюты.
+            `symbol TEXT`
+                Символ валюты для отображения.
+            `is_main INTEGER`
+                Флаг основной валюты. Обычно `0` или `1`.
+            `created_at TEXT`
+                Время создания записи.
+            `updated_at TEXT`
+                Время последнего обновления записи.
+
+    `resources`
+        Хранит ресурсы, которые не являются валютой.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Внутренний идентификатор ресурса.
+            `name TEXT UNIQUE`
+                Уникальное имя ресурса.
+            `description TEXT`
+                Краткое описание ресурса.
+            `emoji TEXT`
+                Символ или emoji для отображения в сообщениях.
+            `created_at TEXT`
+                Время создания записи.
+            `updated_at TEXT`
+                Время последнего обновления записи.
+
+    `user_balances`
+        Хранит количество каждой валюты у каждого пользователя.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Идентификатор строки.
+            `user_id INTEGER`
+                Ссылка на `users.id`.
+            `currency_id INTEGER`
+                Ссылка на `currencies.id`.
+            `amount INTEGER`
+                Количество валюты у пользователя.
+            `updated_at TEXT`
+                Время последнего изменения значения.
+        Формат хранения:
+            одна строка = одна валюта у одного пользователя.
+
+    `user_resources`
+        Хранит количество каждого ресурса у каждого пользователя.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Идентификатор строки.
+            `user_id INTEGER`
+                Ссылка на `users.id`.
+            `resource_id INTEGER`
+                Ссылка на `resources.id`.
+            `amount INTEGER`
+                Количество ресурса у пользователя.
+            `updated_at TEXT`
+                Время последнего изменения значения.
+        Формат хранения:
+            одна строка = один ресурс у одного пользователя.
+
+    `shop_items`
+        Хранит предметы магазина.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Внутренний идентификатор предмета.
+            `name TEXT UNIQUE`
+                Название предмета.
+            `description TEXT`
+                Описание предмета.
+            `cost_amount INTEGER`
+                Цена предмета в выбранной валюте.
+            `cost_currency_id INTEGER`
+                Ссылка на `currencies.id`.
+            `required_role_id INTEGER`
+                Discord ID роли, необходимой для покупки. Может быть `NULL`.
+            `stock INTEGER`
+                Остаток предмета. `NULL` означает бесконечный запас.
+            `is_active INTEGER`
+                Флаг активности предмета. Обычно `0` или `1`.
+            `created_at TEXT`
+                Время создания записи.
+            `updated_at TEXT`
+                Время последнего обновления записи.
+
+    `role_incomes`
+        Хранит роли, которые позволяют получать доход по кулдауну.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Внутренний идентификатор настройки дохода.
+            `role_id INTEGER UNIQUE`
+                Discord ID роли.
+            `cooldown_seconds INTEGER`
+                Кулдаун между сборами в секундах.
+            `currency_id INTEGER`
+                Ссылка на `currencies.id`. Может быть `NULL`, если роль не выдает валюту.
+            `currency_amount INTEGER`
+                Размер валютной награды. Может быть `NULL`.
+            `is_active INTEGER`
+                Флаг активности записи. Обычно `0` или `1`.
+            `created_at TEXT`
+                Время создания записи.
+            `updated_at TEXT`
+                Время последнего обновления записи.
+
+    `role_income_resources`
+        Хранит ресурсы, которые дополнительно выдает доходная роль.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Идентификатор строки.
+            `role_income_id INTEGER`
+                Ссылка на `role_incomes.id`.
+            `resource_id INTEGER`
+                Ссылка на `resources.id`.
+            `amount INTEGER`
+                Количество ресурса за один сбор.
+        Формат хранения:
+            одна строка = один ресурс в награде одной роли.
+
+    `role_income_claims`
+        Хранит информацию о последнем сборе дохода пользователем.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Идентификатор строки.
+            `role_income_id INTEGER`
+                Ссылка на `role_incomes.id`.
+            `user_id INTEGER`
+                Ссылка на `users.id`.
+            `last_claim_at TEXT`
+                Момент последнего сбора в ISO-формате:
+                `YYYY-MM-DDTHH:MM:SS` или `YYYY-MM-DDTHH:MM:SS.mmmmmm`.
+        Формат хранения:
+            одна строка = один пользователь для одной доходной роли.
+
+Заметки:
+    - Для работы с `main_db` проект использует `sqlite3.Row`, поэтому строки БД
+      читаются по именам колонок.
+    - Объекты из `classes/objects/game_objects.py` уже знают, в какие таблицы
+      обращаться, поэтому в основной логике чаще всего не нужен прямой SQL.
+    - Для корректной работы связей в SQLite желательно включать
+      `PRAGMA foreign_keys = ON`.
+"""
 
 MAIN_CURRENCY_SYMVOL: str
-MAIN_CURRENCY_ID: str
+MAIN_CURRENCY_ID: int
 
 class Currency:
-    """"""
+    """
+    Объект валюты сервера.
+
+    Поля экземпляра:
+        `id: int`
+            Идентификатор валюты из таблицы `currencies`.
+        `name: str`
+            Название валюты.
+        `symbol: str | None`
+            Символ валюты для отображения.
+        `is_main: bool`
+            Является ли валюта основной.
+        `created_at: str`
+            Время создания записи в БД.
+        `updated_at: str`
+            Время последнего обновления записи.
+
+    Используемая таблица:
+        `currencies`
+
+    Исключения:
+        `LookupError`
+            Если валюта с указанным ID не найдена.
+        `RuntimeError`
+            Если база данных еще не инициализирована.
+        `sqlite3.Error`
+            Возможны ошибки БД при создании или изменении.
+    """
+    id: int
+    name: str
+    symbol: str | None
+    is_main: bool
+    created_at: str
+    updated_at: str
+
     def __init__(self, id_: int | str) -> None:
-        """"""
+        """
+        Загружает валюту из БД по ее идентификатору.
+
+        Параметры:
+            `id_: int | str`
+                Идентификатор валюты в таблице `currencies`.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `LookupError`
+                Если валюта с таким ID не существует.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+        """
     
     @classmethod
     def all(cls) -> List['Currency']: # type: ignore
-        """"""
+        """
+        Возвращает список всех валют из таблицы `currencies`.
+
+        Параметры:
+            отсутствуют.
+
+        Возвращает:
+            `list[Currency]`
+                Все валюты, отсортированные по `id`.
+
+        Исключения:
+            `RuntimeError`
+                Если соединение с БД не настроено.
+        """
     
     @classmethod
-    def create(cls):
-        """"""
+    def create(cls, name: str, symbol: str | None = None, is_main: bool = False) -> 'Currency': # type: ignore
+        """
+        Создает новую валюту и возвращает загруженный объект.
+
+        Параметры:
+            `name: str`
+                Название новой валюты. Должно быть уникальным.
+            `symbol: str | None = None`
+                Символ валюты для отображения.
+            `is_main: bool = False`
+                Нужно ли сделать валюту основной.
+
+        Возвращает:
+            `Currency`
+                Только что созданная валюта.
+
+        Исключения:
+            `sqlite3.IntegrityError`
+                Если нарушена уникальность имени.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+
+        Заметки:
+            Если `is_main=True`, у остальных валют флаг `is_main` будет сброшен.
+        """
         
-    def edit(self, name: str):
-        """"""
+    def edit(self, name: str | None = None, symbol: str | None = None, is_main: bool | None = None):
+        """
+        Обновляет поля текущей валюты и перезагружает объект из БД.
+
+        Параметры:
+            `name: str | None = None`
+                Новое имя валюты.
+            `symbol: str | None = None`
+                Новый символ валюты.
+            `is_main: bool | None = None`
+                Новый статус основной валюты.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `sqlite3.Error`
+                Возможны ошибки при обновлении записи.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+
+        Заметки:
+            Если все параметры равны `None`, метод ничего не делает.
+        """
 
 class Resource:
-    """"""
+    """
+    Объект ресурса сервера.
+
+    Поля экземпляра:
+        `id: int`
+            Идентификатор ресурса из таблицы `resources`.
+        `name: str`
+            Название ресурса.
+        `description: str | None`
+            Описание ресурса.
+        `emoji: str | None`
+            Emoji или текстовый символ ресурса.
+        `created_at: str`
+            Время создания записи.
+        `updated_at: str`
+            Время последнего обновления записи.
+
+    Используемая таблица:
+        `resources`
+    """
+    id: int
+    name: str
+    description: str | None
+    emoji: str | None
+    created_at: str
+    updated_at: str
+
     def __init__(self, id_: int | str):
-        """"""
+        """
+        Загружает ресурс из БД по идентификатору.
+
+        Параметры:
+            `id_: int | str`
+                Идентификатор ресурса.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `LookupError`
+                Если ресурс не найден.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+        """
     
     @classmethod
     def all(cls) -> List['Resource']:  # type: ignore
-        """"""
+        """
+        Возвращает список всех ресурсов.
+
+        Параметры:
+            отсутствуют.
+
+        Возвращает:
+            `list[Resource]`
+                Все ресурсы, отсортированные по `id`.
+        """
     
     @classmethod
-    def create(cls):
-        """"""
+    def create(cls, name: str, description: str | None = None, emoji: str | None = None) -> 'Resource': # type: ignore
+        """
+        Создает новый ресурс и возвращает его объект.
+
+        Параметры:
+            `name: str`
+                Название ресурса. Должно быть уникальным.
+            `description: str | None = None`
+                Описание ресурса.
+            `emoji: str | None = None`
+                Emoji или символ ресурса.
+
+        Возвращает:
+            `Resource`
+                Созданный ресурс.
+
+        Исключения:
+            `sqlite3.IntegrityError`
+                Если имя ресурса уже занято.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+        """
     
-    def edit(self, name: str):
-        """"""
+    def edit(self, name: str | None = None, description: str | None = None, emoji: str | None = None):
+        """
+        Обновляет текущий ресурс и перечитывает его из БД.
+
+        Параметры:
+            `name: str | None = None`
+                Новое имя ресурса.
+            `description: str | None = None`
+                Новое описание ресурса.
+            `emoji: str | None = None`
+                Новый emoji или символ.
+
+        Возвращает:
+            `None`
+
+        Заметки:
+            Если все параметры равны `None`, метод ничего не делает.
+        """
 
 class ShopItem:
-    """"""
+    """
+    Объект предмета магазина.
+
+    Поля экземпляра:
+        `id: int`
+            Идентификатор предмета из таблицы `shop_items`.
+        `name: str`
+            Название предмета.
+        `description: str | None`
+            Описание предмета.
+        `cost_amount: int`
+            Стоимость предмета.
+        `cost_currency_id: int`
+            ID валюты, в которой оплачивается предмет.
+        `required_role_id: int | None`
+            Discord ID роли, необходимой для покупки.
+        `stock: int | None`
+            Остаток на складе. `None` означает бесконечный запас.
+        `is_active: bool`
+            Доступен ли предмет в магазине.
+        `created_at: str`
+            Время создания записи.
+        `updated_at: str`
+            Время последнего изменения записи.
+        `currency: Currency`
+            Загруженный объект валюты стоимости.
+
+    Используемая таблица:
+        `shop_items`
+    """
+    id: int
+    name: str
+    description: str | None
+    cost_amount: int
+    cost_currency_id: int
+    required_role_id: int | None
+    stock: int | None
+    is_active: bool
+    created_at: str
+    updated_at: str
+    currency: Currency
+
     def __init__(self, id_: int | str):
-        """"""
+        """
+        Загружает предмет магазина по его ID.
+
+        Параметры:
+            `id_: int | str`
+                Идентификатор предмета в таблице `shop_items`.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `LookupError`
+                Если предмет не найден.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+        """
     
     @classmethod
     def create(cls,
                name: str,
                description: str,
                cost: int,
-               required_role: Role | int,
-               currency: str | int) -> List['ShopItem']: # type: ignore
-        """"""
+               required_role: Role | int | None,
+               currency: str | int,
+               stock: int | None = None,
+               is_active: bool = True) -> 'ShopItem': # type: ignore
+        """
+        Создает новый предмет магазина.
+
+        Параметры:
+            `name: str`
+                Название предмета. Должно быть уникальным.
+            `description: str`
+                Описание предмета.
+            `cost: int`
+                Стоимость предмета.
+            `required_role: Role | int | None`
+                Роль, необходимая для покупки. Можно передать объект роли,
+                ее Discord ID или `None`.
+            `currency: str | int`
+                Идентификатор валюты стоимости.
+            `stock: int | None = None`
+                Остаток предмета. `None` означает бесконечный запас.
+            `is_active: bool = True`
+                Будет ли предмет сразу доступен.
+
+        Возвращает:
+            `ShopItem`
+                Созданный предмет магазина.
+
+        Исключения:
+            `sqlite3.IntegrityError`
+                Если нарушена уникальность имени или ссылка на валюту.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+        """
 
     def edit(self, 
                 name: str | None = None, 
                 description: str | None = None, 
                 cost: int | None = None, 
                 required_role: Role | int | None = None, 
-                currency: str | None = None):
-        """"""
+                currency: str | int | None = None,
+                stock: int | None = None,
+                is_active: bool | None = None):
+        """
+        Изменяет поля предмета магазина и перезагружает объект.
+
+        Параметры:
+            `name: str | None = None`
+                Новое имя предмета.
+            `description: str | None = None`
+                Новое описание предмета.
+            `cost: int | None = None`
+                Новая стоимость.
+            `required_role: Role | int | None = None`
+                Новая требуемая роль.
+            `currency: str | int | None = None`
+                Новый ID валюты стоимости.
+            `stock: int | None = None`
+                Новый остаток.
+            `is_active: bool | None = None`
+                Новый флаг активности.
+
+        Возвращает:
+            `None`
+
+        Заметки:
+            Если все параметры равны `None`, метод ничего не делает.
+        """
     
     def get_embed(self) -> Embed: # type: ignore
-        """"""
+        """
+        Собирает embed для показа предмета в Discord.
+
+        Параметры:
+            отсутствуют.
+
+        Возвращает:
+            `disnake.Embed`
+                Готовый embed с названием, ценой, описанием и дополнительными полями.
+
+        Заметки:
+            Метод удобен для витрины магазина или детального просмотра предмета.
+        """
     
     def get_embed_field_params(self) -> Tuple[str, str]: # type: ignore
-        """"""
+        """
+        Возвращает сокращенную пару значений для `Embed.add_field`.
+
+        Параметры:
+            отсутствуют.
+
+        Возвращает:
+            `tuple[str, str]`
+                Кортеж вида `(название, сокращенное описание)`.
+
+        Заметки:
+            Описание автоматически обрезается примерно до 200 символов.
+        """
+
+class RoleIncome:
+    """
+    Объект доходной роли.
+
+    Поля экземпляра:
+        `id: int`
+            Идентификатор записи в `role_incomes`.
+        `role_id: int`
+            Discord ID роли.
+        `cooldown_seconds: int`
+            Кулдаун между сборами в секундах.
+        `currency_id: int | None`
+            ID валюты награды.
+        `currency_amount: int | None`
+            Размер награды в валюте.
+        `is_active: bool`
+            Активна ли доходная роль.
+        `created_at: str`
+            Время создания записи.
+        `updated_at: str`
+            Время последнего обновления записи.
+        `currency: Currency | None`
+            Объект валюты награды, если она есть.
+        `resources: list[tuple[Resource, int]]`
+            Список ресурсов, которые выдает роль.
+
+    Используемые таблицы:
+        `role_incomes`
+        `role_income_resources`
+        `role_income_claims`
+    """
+    id: int
+    role_id: int
+    cooldown_seconds: int
+    currency_id: int | None
+    currency_amount: int | None
+    is_active: bool
+    created_at: str
+    updated_at: str
+    currency: Currency | None
+    resources: List[Tuple[Resource, int]]
+
+    def __init__(self, id_: int | str):
+        """
+        Загружает доходную роль по ID записи.
+
+        Параметры:
+            `id_: int | str`
+                Идентификатор записи в `role_incomes`.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `LookupError`
+                Если запись не найдена.
+            `RuntimeError`
+                Если соединение с БД не настроено.
+        """
+
+    @classmethod
+    def from_role(cls, role: Role | int) -> 'RoleIncome': # type: ignore
+        """
+        Ищет настройку дохода по Discord-роли.
+
+        Параметры:
+            `role: Role | int`
+                Объект роли или ее Discord ID.
+
+        Возвращает:
+            `RoleIncome`
+                Найденная доходная роль.
+
+        Исключения:
+            `LookupError`
+                Если для роли еще не создан доход.
+        """
+
+    @classmethod
+    def all(cls, active_only: bool = False) -> List['RoleIncome']: # type: ignore
+        """
+        Возвращает список всех доходных ролей.
+
+        Параметры:
+            `active_only: bool = False`
+                Если `True`, будут возвращены только активные записи.
+
+        Возвращает:
+            `list[RoleIncome]`
+                Все найденные доходные роли.
+        """
+
+    @classmethod
+    def create(cls,
+               role: Role | int,
+               cooldown_seconds: int,
+               currency: 'Currency | int | None' = None, # type: ignore
+               currency_amount: int | None = None,
+               resources: List[Tuple[int | str, int]] | None = None,
+               is_active: bool = True) -> 'RoleIncome': # type: ignore
+        """
+        Создает новую настройку дохода для роли.
+
+        Параметры:
+            `role: Role | int`
+                Объект Discord-роли или ее ID.
+            `cooldown_seconds: int`
+                Кулдаун между сборами в секундах.
+            `currency: Currency | int | None = None`
+                Валюта награды.
+            `currency_amount: int | None = None`
+                Размер награды в валюте.
+            `resources: list[tuple[int | str, int]] | None = None`
+                Дополнительные ресурсы награды в формате
+                `(resource_id, amount)`.
+            `is_active: bool = True`
+                Должна ли роль сразу быть активной.
+
+        Возвращает:
+            `RoleIncome`
+                Созданный объект доходной роли.
+
+        Исключения:
+            `ValueError`
+                Если кулдаун меньше либо равен нулю, не удалось определить ID роли
+                или не указана ни валюта, ни ресурсы.
+            `sqlite3.IntegrityError`
+                Если доход для роли уже существует.
+        """
+
+    def edit(self,
+             cooldown_seconds: int | None = None,
+             currency: 'Currency | int | None' = None, # type: ignore
+             currency_amount: int | None = None,
+             resources: List[Tuple[int | str, int]] | None = None,
+             is_active: bool | None = None):
+        """
+        Изменяет доходную роль и, при необходимости, полностью заменяет список ресурсов.
+
+        Параметры:
+            `cooldown_seconds: int | None = None`
+                Новый кулдаун в секундах.
+            `currency: Currency | int | None = None`
+                Новая валюта награды.
+            `currency_amount: int | None = None`
+                Новый размер валютной награды.
+            `resources: list[tuple[int | str, int]] | None = None`
+                Новый полный список ресурсов роли. Если передан список, старые
+                ресурсы будут удалены и заменены.
+            `is_active: bool | None = None`
+                Новый флаг активности.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `ValueError`
+                Если `cooldown_seconds <= 0`.
+        """
+
+    def get_last_claim_at(self, user_id: int):
+        """
+        Возвращает время последнего сбора дохода конкретным пользователем.
+
+        Параметры:
+            `user_id: int`
+                Discord ID пользователя.
+
+        Возвращает:
+            `datetime | None`
+                Время последнего сбора или `None`, если пользователь еще не собирал доход.
+
+        Используемая таблица:
+            `role_income_claims`
+        """
+
+    def set_last_claim_at(self, user_id: int, last_claim_at):
+        """
+        Создает или обновляет запись о последнем сборе дохода пользователем.
+
+        Параметры:
+            `user_id: int`
+                Discord ID пользователя.
+            `last_claim_at: datetime | str`
+                Новый момент последнего сбора. Если передан `datetime`,
+                он будет преобразован в ISO-строку.
+
+        Возвращает:
+            `None`
+
+        Заметки:
+            Метод использует upsert-логику: запись создается, если ее не было,
+            и обновляется, если она уже существует.
+        """
 
 class _UserBalance:
-    pass
+    """
+    Словареподобная обертка над балансами пользователя.
+
+    Назначение:
+        Позволяет работать с балансами как с `dict`, где ключом является
+        `currency_id`, а значением — количество валюты.
+
+    Пример:
+        `balance[1] += 100`
+
+    Используемая таблица:
+        `user_balances`
+
+    Заметки:
+        - Класс создается через `user.get_balance()`.
+        - При изменении значения запись сразу сохраняется в БД.
+        - Метод `get_objects()` в реальной реализации возвращает пары
+          `(Currency, amount)`.
+    """
+    id: int
+    _dict: dict[int, int]
+
+    def __init__(self, id_: int | str) -> None:
+        """
+        Загружает балансы пользователя из таблицы `user_balances`.
+
+        Параметры:
+            `id_: int | str`
+                Discord ID пользователя.
+
+        Возвращает:
+            `None`
+        """
+
+    def __getitem__(self, key: int | str) -> int: # type: ignore
+        """
+        Возвращает количество валюты по `currency_id`.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор валюты.
+
+        Возвращает:
+            `int`
+                Текущее количество валюты.
+
+        Исключения:
+            `KeyError`
+                Если валюты нет в локальном словаре объекта.
+        """
+
+    def __setitem__(self, key: int | str, value: int) -> None:
+        """
+        Записывает новое количество валюты и сразу сохраняет его в БД.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор валюты.
+            `value: int`
+                Новое количество валюты.
+
+        Возвращает:
+            `None`
+        """
+
+    def __delitem__(self, key: int | str) -> None:
+        """
+        Удаляет запись валюты пользователя из локального объекта и из БД.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор валюты.
+
+        Возвращает:
+            `None`
+        """
+
+    def __iter__(self):
+        """
+        Возвращает итератор по `currency_id`.
+        """
+
+    def __len__(self) -> int: # type: ignore
+        """
+        Возвращает количество валютных записей пользователя.
+        """
+
+    def get_objects(self) -> List[Tuple[Currency, int]]: # type: ignore
+        """
+        Возвращает список пар `(объект валюты, количество)`.
+
+        Возвращает:
+            `list[tuple[Currency, int]]`
+                Балансы пользователя в виде объектов.
+        """
+
 class _UserResources:
-    pass
+    """
+    Словареподобная обертка над ресурсами пользователя.
+
+    Назначение:
+        Позволяет работать с ресурсами как с `dict`, где ключом является
+        `resource_id`, а значением — количество ресурса.
+
+    Пример:
+        `resources[3] += 2`
+
+    Используемая таблица:
+        `user_resources`
+
+    Заметки:
+        - Класс создается через `user.get_resources()`.
+        - При изменении значения запись сразу сохраняется в БД.
+        - Метод `get_objects()` в реальной реализации возвращает пары
+          `(Resource, amount)`.
+    """
+    id: int
+    _dict: dict[int, int]
+
+    def __init__(self, id_: int | str) -> None:
+        """
+        Загружает ресурсы пользователя из таблицы `user_resources`.
+
+        Параметры:
+            `id_: int | str`
+                Discord ID пользователя.
+
+        Возвращает:
+            `None`
+        """
+
+    def __getitem__(self, key: int | str) -> int: # type: ignore
+        """
+        Возвращает количество ресурса по `resource_id`.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор ресурса.
+
+        Возвращает:
+            `int`
+                Текущее количество ресурса.
+
+        Исключения:
+            `KeyError`
+                Если ресурса нет в локальном словаре объекта.
+        """
+
+    def __setitem__(self, key: int | str, value: int) -> None:
+        """
+        Записывает новое количество ресурса и сразу сохраняет его в БД.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор ресурса.
+            `value: int`
+                Новое количество ресурса.
+
+        Возвращает:
+            `None`
+        """
+
+    def __delitem__(self, key: int | str) -> None:
+        """
+        Удаляет запись ресурса пользователя из локального объекта и из БД.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор ресурса.
+
+        Возвращает:
+            `None`
+        """
+
+    def __iter__(self):
+        """
+        Возвращает итератор по `resource_id`.
+        """
+
+    def __len__(self) -> int: # type: ignore
+        """
+        Возвращает количество ресурсных записей пользователя.
+        """
+
+    def get_objects(self) -> List[Tuple[Resource, int]]: # type: ignore
+        """
+        Возвращает список пар `(объект ресурса, количество)`.
+
+        Возвращает:
+            `list[tuple[Resource, int]]`
+                Ресурсы пользователя в виде объектов.
+        """

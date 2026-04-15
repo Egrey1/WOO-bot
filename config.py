@@ -21,14 +21,18 @@ def first_config():
     deps.Resource = cls.Resource
     deps.Currency = cls.Currency
     deps.ShopItem = cls.ShopItem
+    deps.RoleIncome = cls.RoleIncome
     deps._UserBalance = cls._UserBalance
     deps._UserResources = cls._UserResources
     
     
     sql.Connection.autocreate = cls.NewConnection.autocreate
 
+    ds.Role.get_role_income = cls.NewRole.get_role_income # pyright: ignore[reportAttributeAccessIssue]
     ds.Role.get_role_information = cls.NewRole.get_role_information # pyright: ignore[reportAttributeAccessIssue]
+    ds.Role.create_role_income = cls.NewRole.create_role_income # pyright: ignore[reportAttributeAccessIssue]
     ds.Role.edit_role_information = cls.NewRole.edit_role_information # pyright: ignore[reportAttributeAccessIssue]
+    ds.Role.edit_role_income = cls.NewRole.edit_role_income # pyright: ignore[reportAttributeAccessIssue]
 
     ds_user._UserTag.get_balance = cls.NewUser.get_balance # pyright: ignore[reportAttributeAccessIssue]
     ds_user._UserTag.get_resources = cls.NewUser.get_resources # pyright: ignore[reportAttributeAccessIssue]
