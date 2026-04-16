@@ -1,6 +1,7 @@
 from ..library import Context, CommandInteraction, Role, dt, command, slash_command, Param, deps, Embed, Cog
 
 class AddRoleIncome(Cog):
+    dict = {}
     def _update_dict(self):
         resources = deps.Resource.all()
         self.dict = {resource.name: resource.id for resource in resources}
@@ -14,7 +15,7 @@ class AddRoleIncome(Cog):
             amount: int, 
             time: str, 
             currency: int | None = None, 
-            resource: str | None = None):
+            resource: int | None = None):
         if not any([currency, resource]):
             raise ValueError('Неправильно указаны параметры')
         
@@ -28,7 +29,7 @@ class AddRoleIncome(Cog):
             newtime, 
             amount if not resource else None, 
             currency, 
-            (resource + ':' + str(amount)) if resource is not None else None
+            (str(resource) + ':' + str(amount)) if resource is not None else None
         )
     
 
@@ -48,7 +49,13 @@ class AddRoleIncome(Cog):
         if time[-1] not in 'smh':
             time += 'h'
         
-        self._add_role_income(role, amount, time, None if resource is not None else deps.MAIN_CURRENCY_ID, str(self.dict.get(str(resource))))
+        self._add_role_income(
+            role, 
+            amount, 
+            time, 
+            None if resource is not None else deps.MAIN_CURRENCY_ID, 
+            self.dict.get(str(resource))
+        )
         await interaction.response.send_message('Роль успешно добавлена!', ephemeral=True)
     
 
