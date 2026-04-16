@@ -1,2 +1,2 @@
 from .objects import *
-from .objects import _UserBalance, _UserResources
+from .objects import _UserBalance, _UserResources, _UserInventory

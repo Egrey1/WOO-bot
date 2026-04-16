@@ -12,31 +12,34 @@ def first_config():
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     deps.PREFIX = ('&', '& ')
-    deps.bot = Bot(command_prefix=deps.PREFIX, intents=ds.Intents.all())
+    deps.bot = Bot(command_prefix=deps.PREFIX, intents=ds.Intents.all(), sync_commands=True)
     deps.TOKEN = getenv('TOKEN')
-
-    deps.main_db = sql.connect('databases/main.db', check_same_thread=False)
+    deps.MAIN_CURRENCY_ID = 1
+    
+    deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row
 
     deps.Resource = cls.Resource
     deps.Currency = cls.Currency
     deps.ShopItem = cls.ShopItem
+    deps.InventoryItem = cls.InventoryItem
     deps.RoleIncome = cls.RoleIncome
     deps._UserBalance = cls._UserBalance
     deps._UserResources = cls._UserResources
-    
-    
-    sql.Connection.autocreate = cls.NewConnection.autocreate
+    deps._UserInventory = cls._UserInventory
 
-    ds.Role.get_role_income = cls.NewRole.get_role_income # pyright: ignore[reportAttributeAccessIssue]
-    ds.Role.get_role_information = cls.NewRole.get_role_information # pyright: ignore[reportAttributeAccessIssue]
-    ds.Role.create_role_income = cls.NewRole.create_role_income # pyright: ignore[reportAttributeAccessIssue]
-    ds.Role.edit_role_information = cls.NewRole.edit_role_information # pyright: ignore[reportAttributeAccessIssue]
-    ds.Role.edit_role_income = cls.NewRole.edit_role_income # pyright: ignore[reportAttributeAccessIssue]
 
-    ds_user._UserTag.get_balance = cls.NewUser.get_balance # pyright: ignore[reportAttributeAccessIssue]
-    ds_user._UserTag.get_resources = cls.NewUser.get_resources # pyright: ignore[reportAttributeAccessIssue]
+    ds.Role.get_role_information = cls.NewRole.get_role_information # type: ignore
+    ds.Role.create_role_information = cls.NewRole.create_role_information  # type: ignore
+    ds.Role.edit_role_information = cls.NewRole.edit_role_information # type: ignore
+
+    ds_user._UserTag.get_balance = cls.NewUser.get_balance # type: ignore
+    ds_user._UserTag.get_resources = cls.NewUser.get_resources # type: ignore
+    ds_user._UserTag.get_inventory = cls.NewUser.get_inventory # type: ignore
     
 
 async def second_config():
-    pass
+    import cogs as _
+    logging.info(f'Бот успешно запущен как {deps.bot.user}')
+    logging.info(f'Количество загруженных когов/расширений: {len(deps.bot.cogs)}')
+    logging.info(f'Количество доступных команд: {len(deps.bot.all_commands)}')

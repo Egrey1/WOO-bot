@@ -433,6 +433,115 @@ class ShopItem(_BaseEntity):
         return self.name, description[:197] + '...'
 
 
+class InventoryItem(_BaseEntity):
+    """"""
+
+    table_name = 'user_inventory'
+
+    def __init__(self, user_id: int | str, shop_item_id: int | str) -> None:
+        row = self._fetch_one(
+            """
+            SELECT *
+            FROM user_inventory
+            WHERE user_id = ? AND shop_item_id = ?
+            """,
+            (user_id, shop_item_id),
+        )
+        if row is None:
+            raise NotFound('Предмет инвентаря', f'{user_id}:{shop_item_id}')
+
+        self.user_id = int(row['user_id'])
+        self.shop_item_id = int(row['shop_item_id'])
+        self.amount = int(row['amount'])
+        self.updated_at = str(row['updated_at'])
+        self.item = ShopItem(self.shop_item_id)
+
+    @classmethod
+    def all_for_user(cls, user_id: int | str) -> list['InventoryItem']:
+        """"""
+
+        rows = cls._fetch_all(
+            """
+            SELECT user_id, shop_item_id
+            FROM user_inventory
+            WHERE user_id = ?
+            ORDER BY shop_item_id
+            """,
+            (user_id,),
+        )
+        return [cls(row['user_id'], row['shop_item_id']) for row in rows]
+
+    @classmethod
+    def create(
+        cls,
+        user_id: int,
+        shop_item: ShopItem | int,
+        amount: int = 1,
+    ) -> 'InventoryItem':
+        """"""
+
+        if amount < 0:
+            raise ValueError('Количество предметов не может быть отрицательным')
+
+        shop_item_id = shop_item.id if isinstance(shop_item, ShopItem) else int(shop_item)
+        with _require_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                INSERT INTO user_inventory (user_id, shop_item_id, amount)
+                VALUES (?, ?, ?)
+                ON CONFLICT(user_id, shop_item_id)
+                DO UPDATE SET
+                    amount = excluded.amount,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (user_id, shop_item_id, amount),
+            )
+            connect.commit()
+            cursor.close()
+        return cls(user_id, shop_item_id)
+
+    def edit(self, amount: int) -> None:
+        """"""
+
+        if amount < 0:
+            raise ValueError('Количество предметов не может быть отрицательным')
+        if amount == 0:
+            self.delete()
+            return
+
+        with _require_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                UPDATE user_inventory
+                SET amount = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND shop_item_id = ?
+                """,
+                (amount, self.user_id, self.shop_item_id),
+            )
+            connect.commit()
+            cursor.close()
+
+        self.__init__(self.user_id, self.shop_item_id)
+
+    def delete(self) -> None:
+        """"""
+
+        with _require_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                DELETE FROM user_inventory
+                WHERE user_id = ? AND shop_item_id = ?
+                """,
+                (self.user_id, self.shop_item_id),
+            )
+            connect.commit()
+            cursor.close()
+
+
 class RoleIncome(_BaseEntity):
     """"""
 
@@ -548,7 +657,7 @@ class RoleIncome(_BaseEntity):
             connect.commit()
             cursor.close()
 
-        return cls(created_id) # type: ignore
+        return cls(created_id)  # type: ignore
 
     def _load_resources(self) -> list[tuple[Resource, int]]:
         rows = self._fetch_all(
@@ -760,3 +869,29 @@ class _UserResources(_UserEntityMap):
         """"""
 
         return [(Resource(resource_id), amount) for resource_id, amount in self._dict.items()]
+
+
+class _UserInventory(_UserEntityMap):
+    """"""
+
+    table_name = 'user_inventory'
+    key_column = 'shop_item_id'
+
+    def __setitem__(self, key: int | str, value: int) -> None:
+        if int(value) < 0:
+            raise ValueError('Количество предметов не может быть отрицательным')
+        if int(value) == 0:
+            if int(key) in self._dict:
+                self.__delitem__(key)
+            return
+        super().__setitem__(key, value)
+
+    def get_objects(self) -> list[tuple[ShopItem, int]]:
+        """"""
+
+        return [(ShopItem(shop_item_id), amount) for shop_item_id, amount in self._dict.items()]
+
+    def get_entries(self) -> list[InventoryItem]:
+        """"""
+
+        return [InventoryItem(self.id, shop_item_id) for shop_item_id in self._dict]

@@ -2,7 +2,7 @@ from sqlite3 import Connection
 from disnake.ext.commands import Bot
 from disnake import Embed, Intents, Role
 from typing import List, Tuple
-
+import datetime as dt
 
 bot: Bot
 intents: Intents
@@ -119,6 +119,22 @@ main_db: Connection
                 Время создания записи.
             `updated_at TEXT`
                 Время последнего обновления записи.
+
+    `user_inventory`
+        Хранит предметы, принадлежащие пользователям.
+        Поля:
+            `id INTEGER PRIMARY KEY AUTOINCREMENT`
+                Идентификатор строки.
+            `user_id INTEGER`
+                Ссылка на `users.id`.
+            `shop_item_id INTEGER`
+                Ссылка на `shop_items.id`.
+            `amount INTEGER`
+                Количество одинаковых предметов у пользователя.
+            `updated_at TEXT`
+                Время последнего изменения записи.
+        Формат хранения:
+            одна строка = один предмет магазина у одного пользователя.
 
     `role_incomes`
         Хранит роли, которые позволяют получать доход по кулдауну.
@@ -571,6 +587,112 @@ class ShopItem:
             Описание автоматически обрезается примерно до 200 символов.
         """
 
+class InventoryItem:
+    """
+    Объект одной записи инвентаря пользователя.
+
+    Поля экземпляра:
+        `user_id: int`
+            Discord ID владельца предмета.
+        `shop_item_id: int`
+            ID предмета из таблицы `shop_items`.
+        `amount: int`
+            Количество одинаковых предметов.
+        `updated_at: str`
+            Время последнего обновления записи.
+        `item: ShopItem`
+            Загруженный объект предмета магазина.
+
+    Используемая таблица:
+        `user_inventory`
+    """
+    user_id: int
+    shop_item_id: int
+    amount: int
+    updated_at: str
+    item: ShopItem
+
+    def __init__(self, user_id: int | str, shop_item_id: int | str):
+        """
+        Загружает одну запись инвентаря пользователя.
+
+        Параметры:
+            `user_id: int | str`
+                Discord ID пользователя.
+            `shop_item_id: int | str`
+                Идентификатор предмета магазина.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `LookupError`
+                Если запись инвентаря не найдена.
+        """
+
+    @classmethod
+    def all_for_user(cls, user_id: int | str) -> List['InventoryItem']: # type: ignore
+        """
+        Возвращает все записи инвентаря конкретного пользователя.
+
+        Параметры:
+            `user_id: int | str`
+                Discord ID пользователя.
+
+        Возвращает:
+            `list[InventoryItem]`
+                Все найденные записи инвентаря пользователя.
+        """
+
+    @classmethod
+    def create(cls, user_id: int, shop_item: ShopItem | int, amount: int = 1) -> 'InventoryItem': # type: ignore
+        """
+        Создает или обновляет запись инвентаря пользователя.
+
+        Параметры:
+            `user_id: int`
+                Discord ID пользователя.
+            `shop_item: ShopItem | int`
+                Предмет магазина или его ID.
+            `amount: int = 1`
+                Итоговое количество предметов.
+
+        Возвращает:
+            `InventoryItem`
+                Созданная или обновленная запись инвентаря.
+
+        Исключения:
+            `ValueError`
+                Если количество отрицательное.
+        """
+
+    def edit(self, amount: int) -> None:
+        """
+        Обновляет количество предметов в инвентаре.
+
+        Параметры:
+            `amount: int`
+                Новое количество предметов.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `ValueError`
+                Если количество отрицательное.
+
+        Заметки:
+            Если передать `0`, запись будет удалена из БД.
+        """
+
+    def delete(self) -> None:
+        """
+        Удаляет запись предмета из инвентаря пользователя.
+
+        Возвращает:
+            `None`
+        """
+
 class RoleIncome:
     """
     Объект доходной роли.
@@ -731,7 +853,7 @@ class RoleIncome:
                 Если `cooldown_seconds <= 0`.
         """
 
-    def get_last_claim_at(self, user_id: int):
+    def get_last_claim_at(self, user_id: int) -> dt.datetime or None: # type: ignore
         """
         Возвращает время последнего сбора дохода конкретным пользователем.
 
@@ -747,7 +869,7 @@ class RoleIncome:
             `role_income_claims`
         """
 
-    def set_last_claim_at(self, user_id: int, last_claim_at):
+    def set_last_claim_at(self, user_id: int, last_claim_at) -> None:
         """
         Создает или обновляет запись о последнем сборе дохода пользователем.
 
@@ -958,4 +1080,113 @@ class _UserResources:
         Возвращает:
             `list[tuple[Resource, int]]`
                 Ресурсы пользователя в виде объектов.
+        """
+
+class _UserInventory:
+    """
+    Словареподобная обертка над инвентарем пользователя.
+
+    Назначение:
+        Позволяет работать с инвентарем как с `dict`, где ключом является
+        `shop_item_id`, а значением — количество предметов.
+
+    Пример:
+        `inventory[5] += 1`
+
+    Используемая таблица:
+        `user_inventory`
+
+    Заметки:
+        - Класс создается через `user.get_inventory()`.
+        - При изменении значения запись сразу сохраняется в БД.
+        - Метод `get_objects()` возвращает пары `(ShopItem, amount)`.
+        - Метод `get_entries()` возвращает объекты `InventoryItem`.
+    """
+    id: int
+    _dict: dict[int, int]
+
+    def __init__(self, id_: int | str) -> None:
+        """
+        Загружает инвентарь пользователя из таблицы `user_inventory`.
+
+        Параметры:
+            `id_: int | str`
+                Discord ID пользователя.
+
+        Возвращает:
+            `None`
+        """
+
+    def __getitem__(self, key: int | str) -> int: # type: ignore
+        """
+        Возвращает количество предметов по `shop_item_id`.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор предмета магазина.
+
+        Возвращает:
+            `int`
+                Текущее количество предметов.
+        """
+
+    def __setitem__(self, key: int | str, value: int) -> None:
+        """
+        Записывает новое количество предметов и сразу сохраняет его в БД.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор предмета магазина.
+            `value: int`
+                Новое количество предметов.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `ValueError`
+                Если количество отрицательное.
+
+        Заметки:
+            Если передать `0`, запись будет удалена из инвентаря.
+        """
+
+    def __delitem__(self, key: int | str) -> None:
+        """
+        Удаляет запись предмета из инвентаря пользователя.
+
+        Параметры:
+            `key: int | str`
+                Идентификатор предмета магазина.
+
+        Возвращает:
+            `None`
+        """
+
+    def __iter__(self):
+        """
+        Возвращает итератор по `shop_item_id`.
+        """
+
+    def __len__(self) -> int: # type: ignore
+        """
+        Возвращает количество разных предметов в инвентаре пользователя.
+        """
+
+    def get_objects(self) -> List[Tuple[ShopItem, int]]: # type: ignore
+        """
+        Возвращает список пар `(объект предмета, количество)`.
+
+        Возвращает:
+            `list[tuple[ShopItem, int]]`
+                Инвентарь пользователя в виде объектов магазина.
+        """
+
+    def get_entries(self) -> List[InventoryItem]: # type: ignore
+        """
+        Возвращает полный список записей инвентаря в виде объектов `InventoryItem`.
+
+        Возвращает:
+            `list[InventoryItem]`
+                Полные записи инвентаря пользователя.
         """

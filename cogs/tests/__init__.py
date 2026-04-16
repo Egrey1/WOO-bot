@@ -1,5 +1,6 @@
-from .library import Cog
-class TestCog(Cog):
+from .commands import *
+
+class TestCog(AddRoleIncome, CollectCommand):
     def __init__(self, bot):
         self.bot = bot
 

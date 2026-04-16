@@ -11,7 +11,10 @@ from .game_objects import RoleIncome
 
 
 class NewConnection(Connection):
-    def autocreate(self: Connection, user_id: int) -> None:
+    def __init__(self, database, *args, **kwargs):
+        super().__init__(database, *args, **kwargs)
+
+    def autocreate_user(self: Connection, user_id: int) -> None:
         cursor = self.cursor()
         cursor.execute(
             """
@@ -64,12 +67,16 @@ class NewUser(_UserTag):
             return False
 
     def get_balance(self):
-        deps.main_db.autocreate(self.id)
-        return deps._UserBalance(self.id)  # type: ignore[call-arg]
+        deps.main_db.autocreate_user(self.id)
+        return deps._UserBalance(self.id)  
 
     def get_resources(self):
-        deps.main_db.autocreate(self.id)
-        return deps._UserResources(self.id)  # type: ignore[call-arg]
+        deps.main_db.autocreate_user(self.id)
+        return deps._UserResources(self.id) 
+
+    def get_inventory(self):
+        deps.main_db.autocreate_user(self.id)
+        return deps._UserInventory(self.id)
 
 
 class NewRole(Role):
@@ -83,22 +90,28 @@ class NewRole(Role):
             return None
 
     def get_role_information(self):
-        return self.get_role_income()
+        try:
+            return RoleIncome.from_role(self)
+        except LookupError:
+            return None
+        except Exception as error:
+            logging.error(f'Ошибка в NewRole.get_role_income: {error}')
+            return None
 
-    def create_role_income(
-        self,
-        cooldown_seconds: int,
-        currency: int | None = None,
-        currency_amount: int | None = None,
-        resources: list[tuple[int | str, int]] | None = None,
-    ) -> RoleIncome:
-        return RoleIncome.create(
-            role=self,
-            cooldown_seconds=cooldown_seconds,
-            currency=currency,
-            currency_amount=currency_amount,
-            resources=resources,
-        )
+    # def create_role_income(
+    #     self,
+    #     cooldown_seconds: int,
+    #     currency: int | None = None,
+    #     currency_amount: int | None = None,
+    #     resources: list[tuple[int | str, int]] | None = None,
+    # ) -> RoleIncome:
+    #     return RoleIncome.create(
+    #         role=self,
+    #         cooldown_seconds=cooldown_seconds,
+    #         currency=currency,
+    #         currency_amount=currency_amount,
+    #         resources=resources,
+    #     )
 
     def create_role_information(
         self,
@@ -116,7 +129,8 @@ class NewRole(Role):
                 resource_id, amount = raw_resource.split(':', maxsplit=1)
                 normalized_resources.append((int(resource_id), int(amount)))
 
-        return self.create_role_income(
+        return RoleIncome.create(
+            role=self,
             cooldown_seconds=cooldown_seconds,
             currency=int(currency) if currency is not None else None,
             currency_amount=earning,
