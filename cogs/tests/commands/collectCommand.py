@@ -1,4 +1,4 @@
-from ..library import command, Context, dt, Embed, deps, Cog
+from ..library import command, Context, dt, Embed, deps, Cog, Colour
 
 class CollectCommand(Cog):
     
@@ -42,14 +42,16 @@ class CollectCommand(Cog):
                     (f' <- {old} + {sums}\n\n' if sums != 0 else '') + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_balance.items()) + 
                             '\n\n' + 
-                            '\n'.join(f'{k}: {v}' for k, v in income_resource.items())
+                            ('\n'.join(f'{k}: {v}' for k, v in income_resource.items())[:-1])
                     )
-                )
+                ),
+                colour= Colour.green()
             )
         else:
             embed = Embed(
                 title='Ничего не добавилось!',
-                description=f'Подождите <t:{int(min_last + dt.datetime.now().timestamp())}:R> прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!'
+                description=f'Подождите <t:{int(min_last + dt.datetime.now().timestamp())}:R> прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!',
+                colour= Colour.red()
             )
         await ctx.send(embed=embed)
                 

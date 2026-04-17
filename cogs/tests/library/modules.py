@@ -1,5 +1,5 @@
 from disnake.ext.commands import Cog, Context, command, slash_command, Param
-from disnake import CommandInteraction, Role, Embed
+from disnake import CommandInteraction, Role, Embed, Colour
 
 import datetime as dt
 
