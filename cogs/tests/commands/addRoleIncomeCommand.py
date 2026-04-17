@@ -41,10 +41,24 @@ class AddRoleIncome(Cog):
     @role_income_slash_command.sub_command(name='add', description='Добавить новую роль для заработка')
     async def add_role_income_slash_command(self,
                             interaction: CommandInteraction,
-                            role: Role = Param(name='роль', description='Роль, которую нужно создать'),
-                            amount: int = Param(name='сумма', description='Сколько будет приносить роль'),
-                            resource: str | None = Param(None, name='ресурс', description='Какой ресурс будет приносить роль. Пусто, если ничего'),
-                            time: str = Param(name='время', description='Кулдаун для коллекта')
+
+                            role: Role = Param(
+                                name='роль', 
+                                description='Роль, которую нужно создать'
+                            ),
+                            amount: int = Param(
+                                name='сумма', 
+                                description='Сколько будет приносить роль'
+                            ),
+                            resource: str | None = Param(
+                                None, 
+                                name='ресурс', 
+                                description='Какой ресурс будет приносить роль. Пусто, если ничего'
+                            ),
+                            time: str = Param(
+                                name='время', 
+                                description='Кулдаун для коллекта'
+                            )
     ):
         if time[-1] not in 'smh':
             time += 'h'
@@ -63,16 +77,4 @@ class AddRoleIncome(Cog):
     async def add_role_income_slash_command_autocomplete(self, interaction: CommandInteraction, current: str):
         self._update_dict()
         return [k for k in self.dict.keys() if current in k][:25]
-
-
-
-    # @role_income_slash_command.sub_command(name='list', description='Просмотреть роли и их ID для хаработка')
-    # async def list_role_income_slash_command(self, interaction: CommandInteraction):
-        
-
-    # @command('role_income') # type: ignore
-    # async def add_role_income_command(self, ctx: Context, role: Role, amount: int, time: str, resource: str | None = None):
-    #     if time[-1] not in 'smh':
-    #         time += 'h'
-    #     self.add_role_income(role, amount, time, None if resource is not None else deps.MAIN_CURRENCY_ID, resource)
-    #     await ctx.send('Роль успешно добавлена!')
+    

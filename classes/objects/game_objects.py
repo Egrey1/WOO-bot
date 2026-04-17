@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, MutableMapping
+from collections.abc import Iterator
 import datetime as dt
 
 from ..library import deps, logging, Role, Embed, sql_Connection
@@ -69,6 +69,24 @@ class Currency(_BaseEntity):
         self.is_main = bool(row['is_main'])
         self.created_at = str(row['created_at'])
         self.updated_at = str(row['updated_at'])
+        self.amount: int | None = None
+
+    def __int__(self) -> int:
+        return 0 if self.amount is None else int(self.amount)
+
+    def __str__(self) -> str:
+        return str(self.amount) if self.amount is not None else self.name
+
+    def _with_amount(self, amount: int) -> 'Currency':
+        currency = Currency(self.id)
+        currency.amount = amount
+        return currency
+
+    def __iadd__(self, value: int) -> 'Currency':
+        return self._with_amount(int(self) + int(value))
+
+    def __isub__(self, value: int) -> 'Currency':
+        return self._with_amount(int(self) - int(value))
 
     @classmethod
     def all(cls) -> list['Currency']:
@@ -192,6 +210,24 @@ class Resource(_BaseEntity):
         self.emoji = row['emoji']
         self.created_at = str(row['created_at'])
         self.updated_at = str(row['updated_at'])
+        self.amount: int | None = None
+
+    def __int__(self) -> int:
+        return 0 if self.amount is None else int(self.amount)
+
+    def __str__(self) -> str:
+        return str(self.amount) if self.amount is not None else self.name
+
+    def _with_amount(self, amount: int) -> 'Resource':
+        resource = Resource(self.id)
+        resource.amount = amount
+        return resource
+
+    def __iadd__(self, value: int) -> 'Resource':
+        return self._with_amount(int(self) + int(value))
+
+    def __isub__(self, value: int) -> 'Resource':
+        return self._with_amount(int(self) - int(value))
 
     @classmethod
     def all(cls) -> list['Resource']:
@@ -455,6 +491,23 @@ class InventoryItem(_BaseEntity):
         self.amount = int(row['amount'])
         self.updated_at = str(row['updated_at'])
         self.item = ShopItem(self.shop_item_id)
+
+    def __int__(self) -> int:
+        return int(self.amount)
+
+    def __str__(self) -> str:
+        return str(self.amount)
+
+    def _with_amount(self, amount: int) -> 'InventoryItem':
+        entry = InventoryItem(self.user_id, self.shop_item_id)
+        entry.amount = amount
+        return entry
+
+    def __iadd__(self, value: int) -> 'InventoryItem':
+        return self._with_amount(self.amount + int(value))
+
+    def __isub__(self, value: int) -> 'InventoryItem':
+        return self._with_amount(self.amount - int(value))
 
     @classmethod
     def all_for_user(cls, user_id: int | str) -> list['InventoryItem']:
@@ -774,15 +827,18 @@ class RoleIncome(_BaseEntity):
             cursor.close()
 
 
-class _UserEntityMap(MutableMapping[int, int]):
+class _UserEntityMap(dict[int, object]):
     table_name: str = ''
     key_column: str = ''
-    value_factory = staticmethod(int)
 
     def __init__(self, id_: int | str):
+        super().__init__()
         self.id = int(id_)
-        self._dict: dict[int, int] = {}
         self._reload()
+
+    @property
+    def _dict(self):
+        return self
 
     def _reload(self) -> None:
         rows = _BaseEntity._fetch_all(
@@ -794,14 +850,24 @@ class _UserEntityMap(MutableMapping[int, int]):
             """,
             (self.id,),
         )
-        self._dict = {int(row[self.key_column]): int(row['amount']) for row in rows}
+        super().clear()
+        for row in rows:
+            key = int(row[self.key_column])
+            amount = int(row['amount'])
+            super().__setitem__(key, self._make_value(key, amount))
 
-    def __getitem__(self, key: int | str) -> int:
-        return self._dict[int(key)]
+    def _make_value(self, key: int, amount: int):
+        return amount
 
-    def __setitem__(self, key: int | str, value: int) -> None:
+    def _normalize_value(self, value) -> int:
+        return int(value)
+
+    def __getitem__(self, key: int | str):
+        return super().__getitem__(int(key))
+
+    def __setitem__(self, key: int | str, value) -> None:
         normalized_key = int(key)
-        normalized_value = int(value)
+        normalized_value = self._normalize_value(value)
 
         with _require_connection() as connect:
             cursor = connect.cursor()
@@ -819,7 +885,7 @@ class _UserEntityMap(MutableMapping[int, int]):
             connect.commit()
             cursor.close()
 
-        self._dict[normalized_key] = normalized_value
+        super().__setitem__(normalized_key, self._make_value(normalized_key, normalized_value))
 
     def __delitem__(self, key: int | str) -> None:
         normalized_key = int(key)
@@ -835,15 +901,55 @@ class _UserEntityMap(MutableMapping[int, int]):
             connect.commit()
             cursor.close()
 
-        del self._dict[normalized_key]
+        super().__delitem__(normalized_key)
 
     def __iter__(self) -> Iterator[int]:
-        return iter(self._dict)
+        return super().__iter__()
 
     def __len__(self) -> int:
-        return len(self._dict)
+        return super().__len__()
 
-    def get_objects(self) -> list[tuple[object, int]]:
+    def clear(self) -> None:
+        for key in list(self.keys()):
+            self.__delitem__(key)
+
+    def pop(self, key: int | str, default=...):
+        normalized_key = int(key)
+        if normalized_key not in self:
+            if default is ...:
+                raise KeyError(normalized_key)
+            return default
+        value = self[normalized_key]
+        self.__delitem__(normalized_key)
+        return value
+
+    def popitem(self):
+        if not self:
+            raise KeyError('popitem(): dictionary is empty')
+        key = next(iter(self))
+        value = self[key]
+        self.__delitem__(key)
+        return key, value
+
+    def setdefault(self, key: int | str, default=None):
+        normalized_key = int(key)
+        if normalized_key not in self:
+            self[normalized_key] = 0 if default is None else default
+        return self[normalized_key]
+
+    def update(self, other=None, /, **kwargs) -> None:
+        if other is not None:
+            if hasattr(other, 'items'):
+                for key, value in other.items():
+                    self[key] = value
+            else:
+                for key, value in other:
+                    self[key] = value
+
+        for key, value in kwargs.items():
+            self[key] = value
+
+    def get_objects(self):
         raise NotImplementedError
 
 
@@ -853,10 +959,18 @@ class _UserBalance(_UserEntityMap):
     table_name = 'user_balances'
     key_column = 'currency_id'
 
-    def get_objects(self) -> list[tuple[Currency, int]]:
+    def _make_value(self, key: int, amount: int) -> Currency:
+        currency = Currency(key)
+        currency.amount = amount
+        return currency
+
+    def _normalize_value(self, value: Currency | int) -> int:
+        return int(value.amount if isinstance(value, Currency) and value.amount is not None else value)
+
+    def get_objects(self) -> list[Currency]:
         """"""
 
-        return [(Currency(currency_id), amount) for currency_id, amount in self._dict.items()]
+        return list(self.values()) # type: ignore
 
 
 class _UserResources(_UserEntityMap):
@@ -865,10 +979,18 @@ class _UserResources(_UserEntityMap):
     table_name = 'user_resources'
     key_column = 'resource_id'
 
-    def get_objects(self) -> list[tuple[Resource, int]]:
+    def _make_value(self, key: int, amount: int) -> Resource:
+        resource = Resource(key)
+        resource.amount = amount
+        return resource
+
+    def _normalize_value(self, value: Resource | int) -> int:
+        return int(value.amount if isinstance(value, Resource) and value.amount is not None else value)
+
+    def get_objects(self) -> list[Resource]:
         """"""
 
-        return [(Resource(resource_id), amount) for resource_id, amount in self._dict.items()]
+        return list(self.values()) # type: ignore
 
 
 class _UserInventory(_UserEntityMap):
@@ -877,21 +999,30 @@ class _UserInventory(_UserEntityMap):
     table_name = 'user_inventory'
     key_column = 'shop_item_id'
 
-    def __setitem__(self, key: int | str, value: int) -> None:
-        if int(value) < 0:
+    def _make_value(self, key: int, amount: int) -> InventoryItem:
+        entry = InventoryItem(self.id, key)
+        entry.amount = amount
+        return entry
+
+    def _normalize_value(self, value: InventoryItem | int) -> int:
+        return int(value.amount if isinstance(value, InventoryItem) else value)
+
+    def __setitem__(self, key: int | str, value: InventoryItem | int) -> None:
+        normalized_value = self._normalize_value(value)
+        if normalized_value < 0:
             raise ValueError('Количество предметов не может быть отрицательным')
-        if int(value) == 0:
+        if normalized_value == 0:
             if int(key) in self._dict:
                 self.__delitem__(key)
             return
-        super().__setitem__(key, value)
+        super().__setitem__(key, normalized_value)
 
-    def get_objects(self) -> list[tuple[ShopItem, int]]:
+    def get_objects(self) -> list[InventoryItem]:
         """"""
 
-        return [(ShopItem(shop_item_id), amount) for shop_item_id, amount in self._dict.items()]
+        return list(self.values()) # type: ignore
 
     def get_entries(self) -> list[InventoryItem]:
         """"""
 
-        return [InventoryItem(self.id, shop_item_id) for shop_item_id in self._dict]
+        return list(self.values()) # type: ignore

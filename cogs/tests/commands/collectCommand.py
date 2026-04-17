@@ -2,7 +2,7 @@ from ..library import command, Context, dt, Embed, deps, Cog, Colour
 
 class CollectCommand(Cog):
     
-    @command(name='collect') # type: ignore
+    @command(name='collect') 
     async def collect(self, ctx: Context):
         income_balance = {}
         sums = 0

@@ -232,6 +232,7 @@ class Currency:
     is_main: bool
     created_at: str
     updated_at: str
+    amount: int | None
 
     def __init__(self, id_: int | str) -> None:
         """
@@ -320,22 +321,69 @@ class Currency:
             Если все параметры равны `None`, метод ничего не делает.
         """
 
+    def __int__(self) -> int: # type: ignore
+        """
+        Возвращает `amount`, если объект используется как числовое значение.
+
+        Возвращает:
+            `int`
+                Количество валюты, связанное с объектом.
+
+        Заметки:
+            Если `amount` не задан, возвращается `0`.
+        """
+
+    def __str__(self) -> str: # type: ignore
+        """
+        Возвращает строковое представление объекта.
+
+        Возвращает:
+            `str`
+                Количество валюты, если заполнен `amount`, иначе название валюты.
+        """
+
+    def __iadd__(self, value: int) -> 'Currency': # type: ignore
+        """
+        Увеличивает `amount` внутри объекта валюты.
+
+        Параметры:
+            `value: int`
+                Насколько увеличить количество.
+
+        Возвращает:
+            `Currency`
+                Тот же объект с обновленным `amount`.
+        """
+
+    def __isub__(self, value: int) -> 'Currency': # type: ignore
+        """
+        Уменьшает `amount` внутри объекта валюты.
+
+        Параметры:
+            `value: int`
+                Насколько уменьшить количество.
+
+        Возвращает:
+            `Currency`
+                Тот же объект с обновленным `amount`.
+        """
+
 class Resource:
     """
     Объект ресурса сервера.
 
-    Поля экземпляра:
-        `id: int`
+    Attributes:
+        id: int
             Идентификатор ресурса из таблицы `resources`.
-        `name: str`
+        name: str
             Название ресурса.
-        `description: str | None`
+        description: str | None
             Описание ресурса.
-        `emoji: str | None`
+        emoji: str | None
             Emoji или текстовый символ ресурса.
-        `created_at: str`
+        created_at: str
             Время создания записи.
-        `updated_at: str`
+        updated_at: str
             Время последнего обновления записи.
 
     Используемая таблица:
@@ -347,6 +395,7 @@ class Resource:
     emoji: str | None
     created_at: str
     updated_at: str
+    amount: int | None
 
     def __init__(self, id_: int | str):
         """
@@ -420,6 +469,53 @@ class Resource:
 
         Заметки:
             Если все параметры равны `None`, метод ничего не делает.
+        """
+
+    def __int__(self) -> int: # type: ignore
+        """
+        Возвращает `amount`, если объект используется как числовое значение.
+
+        Возвращает:
+            `int`
+                Количество ресурса, связанное с объектом.
+
+        Заметки:
+            Если `amount` не задан, возвращается `0`.
+        """
+
+    def __str__(self) -> str: # type: ignore
+        """
+        Возвращает строковое представление объекта.
+
+        Возвращает:
+            `str`
+                Количество ресурса, если заполнен `amount`, иначе имя ресурса.
+        """
+
+    def __iadd__(self, value: int) -> 'Resource': # type: ignore
+        """
+        Увеличивает `amount` внутри объекта ресурса.
+
+        Параметры:
+            `value: int`
+                Насколько увеличить количество.
+
+        Возвращает:
+            `Resource`
+                Тот же объект с обновленным `amount`.
+        """
+
+    def __isub__(self, value: int) -> 'Resource': # type: ignore
+        """
+        Уменьшает `amount` внутри объекта ресурса.
+
+        Параметры:
+            `value: int`
+                Насколько уменьшить количество.
+
+        Возвращает:
+            `Resource`
+                Тот же объект с обновленным `amount`.
         """
 
 class ShopItem:
@@ -693,6 +789,50 @@ class InventoryItem:
             `None`
         """
 
+    def __int__(self) -> int: # type: ignore
+        """
+        Возвращает количество предметов как число.
+
+        Возвращает:
+            `int`
+                Значение поля `amount`.
+        """
+
+    def __str__(self) -> str: # type: ignore
+        """
+        Возвращает количество предметов как строку.
+
+        Возвращает:
+            `str`
+                Строковое представление поля `amount`.
+        """
+
+    def __iadd__(self, value: int) -> 'InventoryItem': # type: ignore
+        """
+        Увеличивает `amount` внутри объекта записи инвентаря.
+
+        Параметры:
+            `value: int`
+                Насколько увеличить количество.
+
+        Возвращает:
+            `InventoryItem`
+                Тот же логический предмет с обновленным количеством.
+        """
+
+    def __isub__(self, value: int) -> 'InventoryItem': # type: ignore
+        """
+        Уменьшает `amount` внутри объекта записи инвентаря.
+
+        Параметры:
+            `value: int`
+                Насколько уменьшить количество.
+
+        Возвращает:
+            `InventoryItem`
+                Тот же логический предмет с обновленным количеством.
+        """
+
 class RoleIncome:
     """
     Объект доходной роли.
@@ -888,7 +1028,7 @@ class RoleIncome:
             и обновляется, если она уже существует.
         """
 
-class _UserBalance:
+class _UserBalance(dict[int, Currency]):
     """
     Словареподобная обертка над балансами пользователя.
 
@@ -909,7 +1049,7 @@ class _UserBalance:
           `(Currency, amount)`.
     """
     id: int
-    _dict: dict[int, int]
+    _dict: dict[int, Currency]
 
     def __init__(self, id_: int | str) -> None:
         """
@@ -923,32 +1063,32 @@ class _UserBalance:
             `None`
         """
 
-    def __getitem__(self, key: int | str) -> int: # type: ignore
+    def __getitem__(self, key: int | str) -> Currency: # type: ignore
         """
-        Возвращает количество валюты по `currency_id`.
+        Возвращает объект валюты по `currency_id`.
 
         Параметры:
             `key: int | str`
                 Идентификатор валюты.
 
         Возвращает:
-            `int`
-                Текущее количество валюты.
+            `Currency`
+                Объект валюты, у которого заполнено поле `amount`.
 
         Исключения:
             `KeyError`
                 Если валюты нет в локальном словаре объекта.
         """
 
-    def __setitem__(self, key: int | str, value: int) -> None:
+    def __setitem__(self, key: int | str, value: Currency | int) -> None:
         """
         Записывает новое количество валюты и сразу сохраняет его в БД.
 
         Параметры:
             `key: int | str`
                 Идентификатор валюты.
-            `value: int`
-                Новое количество валюты.
+            `value: Currency | int`
+                Либо число, либо объект `Currency` с заполненным `amount`.
 
         Возвращает:
             `None`
@@ -976,16 +1116,16 @@ class _UserBalance:
         Возвращает количество валютных записей пользователя.
         """
 
-    def get_objects(self) -> List[Tuple[Currency, int]]: # type: ignore
+    def get_objects(self) -> List[Currency]: # type: ignore
         """
-        Возвращает список пар `(объект валюты, количество)`.
+        Возвращает список объектов валюты.
 
         Возвращает:
-            `list[tuple[Currency, int]]`
-                Балансы пользователя в виде объектов.
+            `list[Currency]`
+                Балансы пользователя в виде объектов валюты с заполненным `amount`.
         """
 
-class _UserResources:
+class _UserResources(dict[int, Resource]):
     """
     Словареподобная обертка над ресурсами пользователя.
 
@@ -1006,7 +1146,7 @@ class _UserResources:
           `(Resource, amount)`.
     """
     id: int
-    _dict: dict[int, int]
+    _dict: dict[int, Resource]
 
     def __init__(self, id_: int | str) -> None:
         """
@@ -1020,32 +1160,32 @@ class _UserResources:
             `None`
         """
 
-    def __getitem__(self, key: int | str) -> int: # type: ignore
+    def __getitem__(self, key: int | str) -> Resource: # type: ignore
         """
-        Возвращает количество ресурса по `resource_id`.
+        Возвращает объект ресурса по `resource_id`.
 
         Параметры:
             `key: int | str`
                 Идентификатор ресурса.
 
         Возвращает:
-            `int`
-                Текущее количество ресурса.
+            `Resource`
+                Объект ресурса, у которого заполнено поле `amount`.
 
         Исключения:
             `KeyError`
                 Если ресурса нет в локальном словаре объекта.
         """
 
-    def __setitem__(self, key: int | str, value: int) -> None:
+    def __setitem__(self, key: int | str, value: Resource | int) -> None:
         """
         Записывает новое количество ресурса и сразу сохраняет его в БД.
 
         Параметры:
             `key: int | str`
                 Идентификатор ресурса.
-            `value: int`
-                Новое количество ресурса.
+            `value: Resource | int`
+                Либо число, либо объект `Resource` с заполненным `amount`.
 
         Возвращает:
             `None`
@@ -1073,22 +1213,22 @@ class _UserResources:
         Возвращает количество ресурсных записей пользователя.
         """
 
-    def get_objects(self) -> List[Tuple[Resource, int]]: # type: ignore
+    def get_objects(self) -> List[Resource]: # type: ignore
         """
-        Возвращает список пар `(объект ресурса, количество)`.
+        Возвращает список объектов ресурса.
 
         Возвращает:
-            `list[tuple[Resource, int]]`
-                Ресурсы пользователя в виде объектов.
+            `list[Resource]`
+                Ресурсы пользователя в виде объектов с заполненным `amount`.
         """
 
-class _UserInventory:
+class _UserInventory(dict[int, InventoryItem]):
     """
     Словареподобная обертка над инвентарем пользователя.
 
     Назначение:
         Позволяет работать с инвентарем как с `dict`, где ключом является
-        `shop_item_id`, а значением — количество предметов.
+        `shop_item_id`, а значением — объект `InventoryItem`.
 
     Пример:
         `inventory[5] += 1`
@@ -1099,11 +1239,11 @@ class _UserInventory:
     Заметки:
         - Класс создается через `user.get_inventory()`.
         - При изменении значения запись сразу сохраняется в БД.
-        - Метод `get_objects()` возвращает пары `(ShopItem, amount)`.
+        - Метод `get_objects()` возвращает объекты `InventoryItem`.
         - Метод `get_entries()` возвращает объекты `InventoryItem`.
     """
     id: int
-    _dict: dict[int, int]
+    _dict: dict[int, InventoryItem]
 
     def __init__(self, id_: int | str) -> None:
         """
@@ -1117,28 +1257,28 @@ class _UserInventory:
             `None`
         """
 
-    def __getitem__(self, key: int | str) -> int: # type: ignore
+    def __getitem__(self, key: int | str) -> InventoryItem: # type: ignore
         """
-        Возвращает количество предметов по `shop_item_id`.
+        Возвращает объект предмета инвентаря по `shop_item_id`.
 
         Параметры:
             `key: int | str`
                 Идентификатор предмета магазина.
 
         Возвращает:
-            `int`
-                Текущее количество предметов.
+            `InventoryItem`
+                Объект записи инвентаря с заполненным `amount` и `item`.
         """
 
-    def __setitem__(self, key: int | str, value: int) -> None:
+    def __setitem__(self, key: int | str, value: InventoryItem | int) -> None:
         """
         Записывает новое количество предметов и сразу сохраняет его в БД.
 
         Параметры:
             `key: int | str`
                 Идентификатор предмета магазина.
-            `value: int`
-                Новое количество предметов.
+            `value: InventoryItem | int`
+                Либо число, либо объект `InventoryItem`.
 
         Возвращает:
             `None`
@@ -1173,13 +1313,13 @@ class _UserInventory:
         Возвращает количество разных предметов в инвентаре пользователя.
         """
 
-    def get_objects(self) -> List[Tuple[ShopItem, int]]: # type: ignore
+    def get_objects(self) -> List[InventoryItem]: # type: ignore
         """
-        Возвращает список пар `(объект предмета, количество)`.
+        Возвращает список объектов `InventoryItem`.
 
         Возвращает:
-            `list[tuple[ShopItem, int]]`
-                Инвентарь пользователя в виде объектов магазина.
+            `list[InventoryItem]`
+                Инвентарь пользователя в виде объектов записей инвентаря.
         """
 
     def get_entries(self) -> List[InventoryItem]: # type: ignore
