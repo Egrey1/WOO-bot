@@ -1,6 +1,6 @@
 from .commands import *
 
-class ShopCog(InvCommand, ShopCommand):
+class ShopCog(InvCommand, ShopCommand, BuyCommand):
     def __init__(self, bot):
         self.bot = bot
 
