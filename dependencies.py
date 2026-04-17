@@ -8,6 +8,7 @@ bot: Bot
 intents: Intents
 PREFIX: tuple[str]
 TOKEN: str
+VERSION: str
 
 main_db: Connection
 """

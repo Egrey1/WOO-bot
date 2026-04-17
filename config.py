@@ -15,6 +15,7 @@ def first_config():
     deps.bot = Bot(command_prefix=deps.PREFIX, intents=ds.Intents.all(), sync_commands=True)
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
+    deps.VERSION = '1.0 Начало'
     
     deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row
@@ -43,3 +44,4 @@ async def second_config():
     logging.info(f'Бот успешно запущен как {deps.bot.user}')
     logging.info(f'Количество загруженных когов/расширений: {len(deps.bot.cogs)}')
     logging.info(f'Количество доступных команд: {len(deps.bot.all_commands)}')
+    logging.info(f'Версия бота: {deps.VERSION}')
