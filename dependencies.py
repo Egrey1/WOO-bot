@@ -619,6 +619,19 @@ class ShopItem:
                 Если соединение с БД не настроено.
         """
 
+    @classmethod
+    def all(cls, active_only: bool = False) -> List['ShopItem']: # type: ignore
+        """
+        Возвращает список всех предметов магазина
+
+        Params:
+            active_only (bool): По умолчанию False. Нужно ли брать только активные предметы
+        
+        Returns:
+            list[ShopItem]: Список всех предметов магазина
+
+        """
+
     def edit(self, 
                 name: str | None = None, 
                 description: str | None = None, 

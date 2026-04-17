@@ -1,18 +1,20 @@
 from ..library import deps, command, Cog, Context, Embed, AllowedMentions, Colour, View, Button, MessageInteraction
 
 class InvCommand(Cog):
+    normal_inv = {}
+    current_page = {}
 
     @command(name='inv')
     async def inv(self, ctx: Context):
         inventory = ctx.author.get_inventory()
         embed = Embed(title=f'Инвентарь пользователя {ctx.author.mention}')
         total_count = 0
-        self.normal_inv = {}
-        self.current_page = {}
+        self.normal_inv[ctx.author.id] = []
+        self.current_page[ctx.author.id] = 0
 
         for item in inventory.values():
             if item.amount > 0:
-                self.normal_inv[ctx.author.id] = self.normal_inv.get(ctx.author.id, []) + [item]
+                self.normal_inv[ctx.author.id] = self.normal_inv[ctx.author.id] + [item]
                 if total_count != 10:
                     shop_item = deps.ShopItem(item.shop_item_id)
                     embed.add_field(
@@ -61,14 +63,16 @@ class InvCommand(Cog):
             (self.current_page[author_id] * 10):((self.current_page[author_id] + 1) * 10)]:
             shop_item = deps.ShopItem(item.shop_item_id)
             embed.add_field(
-                name= shop_item.get_embed_field_params()[0] + str(item.amount),
+                name= shop_item.get_embed_field_params()[0] + str(item.amount), 
                 value=shop_item.get_embed_field_params()[1]
             )
         
         view = View(timeout=None)
         next_page = Button(
             emoji='⏭️', 
-            disabled=len(self.normal_inv[author_id]) == (self.current_page[author_id] + 1) * 10)
+            disabled=(
+                len(self.normal_inv[author_id]) - 
+                (self.current_page[author_id] + 1) * 10) > 0)
         prev_page = Button(emoji='⏮️')
 
         next_page.callback = lambda inter: self.next_button_pressed(inter, author_id)
