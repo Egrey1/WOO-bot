@@ -15,7 +15,7 @@ def first_config():
     deps.bot = Bot(command_prefix=deps.PREFIX, intents=ds.Intents.all(), sync_commands=True)
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.1 Обновил БД'
+    deps.VERSION = '1.2 Исправил баг связанный с проверкой ролей в buy' 
     
     deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row

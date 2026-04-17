@@ -80,7 +80,7 @@ class BuyCommand(Cog):
             if role.id == required_role_id:
                 flag = False
                 break
-        if flag:
+        if flag and required_role_id is not None:
             return Embed(
                 title='У вас нет нужной роли!',
                 description=f'Для покупки вам необходима роль <&{required_role_id}>', 
