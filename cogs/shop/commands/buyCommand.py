@@ -1,4 +1,4 @@
-from ..library import command, Context, Cog, deps, User, Member, Embed, Colour, AllowedMentions, Message, slash_command, CommandInteraction, Param
+from ..library import command, Context, Cog, deps, User, Member, Embed, Colour, AllowedMentions, Message, slash_command, CommandInteraction, Param, logging
 
 class BuyCommand(Cog):
     items: dict[int, list[deps.ShopItem]] = {}
@@ -51,14 +51,16 @@ class BuyCommand(Cog):
         count: int = Param(1, name='количество', description='количетво покупаемых предметов')
         ):
         try:
+            item = item.strip() # type: ignore
             item: deps.ShopItem = [item for item in deps.ShopItem.all() if item.name == item][0]
             embed = self._buy_process(interaction.user, item, count)
-        except:
+        except Exception as e:
             embed = Embed(
                 title='Неверные данные',
                 description='Такого предмета нет в магазине!', 
                 colour=Colour.red()
             )
+            logging.warning(e)
         await interaction.response.send_message(embed=embed, allowed_mentions=AllowedMentions.none())
     
     @buy_slash.autocomplete('предмет')
@@ -86,7 +88,11 @@ class BuyCommand(Cog):
                 description=f'Для покупки вам необходима роль <&{required_role_id}>', 
                 colour=Colour.red())
         
-        author.get_inventory()[item.id] += count
+        author_inventory = author.get_inventory()
+        if author_inventory.get(item.id) is not None:
+            author_inventory[item.id] += count
+        else:
+            author_inventory[item.id] = count
         author.get_balance()[deps.MAIN_CURRENCY_ID] -= item.cost_amount * count
         return Embed(
             title='Успешно куплено!',
