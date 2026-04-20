@@ -76,5 +76,5 @@ class AddRoleIncome(Cog):
     @add_role_income_slash_command.autocomplete('ресурс')
     async def add_role_income_slash_command_autocomplete(self, interaction: CommandInteraction, current: str):
         self._update_dict()
-        return [k for k in self.dict.keys() if current in k][:25]
+        return [k for k in self.dict.keys() if current.lower() in k.lower()][:25]
     
