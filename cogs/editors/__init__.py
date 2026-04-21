@@ -1,6 +1,7 @@
 from .commands import *
+from .library import Cog
 
-class Editors():
+class Editors(Cog):
     def __init__(self, bot):
         self.bot = bot
 
