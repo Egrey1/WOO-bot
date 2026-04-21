@@ -21,7 +21,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.4 Обновление графического дизайна для предметов магазина' 
+    deps.VERSION = '1.4 микрофикс' 
     
     deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row

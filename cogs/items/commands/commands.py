@@ -102,7 +102,7 @@ class ItemCommands(Cog):
             count = (int(count) ** 2) ** 0.5
             balance = interaction.user.get_balance()[deps.MAIN_CURRENCY_ID].amount or 0
 
-            if count > (balance // (self.item.cost_amount)):
+            if not self.item.cost_amount or (count > (balance // (self.item.cost_amount))):
                 await interaction.response.send_message('Слишком дорого', ephemeral=True)
                 return
             
