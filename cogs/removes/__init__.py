@@ -1,6 +1,6 @@
 from .commands import *
 
-class Removes():
+class Removes(RemoveCurrency, RemoveResource, RemoveShopItem):
     def __init__(self, bot):
         self.bot = bot
 

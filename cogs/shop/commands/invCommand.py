@@ -16,14 +16,14 @@ class InvCommand(Cog):
         for item in inventory.values():
             if item.amount > 0:
                 self.normal_inv[ctx.author.id] = self.normal_inv[ctx.author.id] + [item]
-                if total_count != 10:
+                if total_count < 10:
                     shop_item = deps.ShopItem(item.shop_item_id)
                     embed.add_field(
                         name=(shop_item.get_embed_field_params()[0]) + ' ' + str(item.amount),
                         value=shop_item.get_embed_field_params()[1],
                         inline=False
                     )
-                    total_count += item.amount
+                    total_count += 1
         
         embed.set_footer(text=ctx.author.global_name, icon_url=ctx.author.avatar.url) # type: ignore
         if total_count != 0:

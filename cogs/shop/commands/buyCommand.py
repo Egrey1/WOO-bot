@@ -51,9 +51,9 @@ class BuyCommand(Cog):
         count: int = Param(1, name='количество', description='количетво покупаемых предметов')
         ):
         try:
-            item = item.strip() # type: ignore
-            item: deps.ShopItem = [item for item in deps.ShopItem.all() if item.name == item][0]
-            embed = self._buy_process(interaction.user, item, count)
+            item_name = item.strip() # type: ignore
+            shop_item: deps.ShopItem = [shop_item for shop_item in deps.ShopItem.all() if shop_item.name == item_name][0]
+            embed = self._buy_process(interaction.user, shop_item, count)
         except Exception as e:
             embed = Embed(
                 title='Неверные данные',

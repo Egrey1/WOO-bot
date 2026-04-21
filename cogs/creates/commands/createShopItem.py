@@ -2,7 +2,7 @@ from ..library import Cog, deps, command, Context, Message, Embed, Colour
 
 class CreateShopItem(Cog):
     users: dict[int, dict[str, str | int | None]] = {}
-    messages: dict[int, Message] = {}
+    messagesS: dict[int, Message] = {}
 
     def recreate_shopitem_embed(self, userid, username, useravatarurl, error_mode: bool = False, complete_mode: bool = False) -> Embed:
         embed = Embed(
@@ -21,10 +21,8 @@ class CreateShopItem(Cog):
         if True: # Проверка прав
             if name is not None:
                 self.users[ctx.author.id]['name'] = name
-            
-            deps.ShopItem
 
-            self.messages[ctx.author.id] = await ctx.send(
+            self.messagesS[ctx.author.id] = await ctx.send(
                 embed=self.recreate_shopitem_embed(
                     ctx.author.id, 
                     ctx.author.name, 
@@ -51,7 +49,7 @@ class CreateShopItem(Cog):
                 )
                 await message.channel.send(embed=embed)
 
-                await self.messages[message.author.id].edit(
+                await self.messagesS[message.author.id].edit(
                     embed= self.recreate_shopitem_embed(
                         uid,
                         uname,
@@ -61,11 +59,11 @@ class CreateShopItem(Cog):
                 )
 
                 self.users.pop(message.author.id)
-                self.messages.pop(message.author.id)
+                self.messagesS.pop(message.author.id)
                 return
 
             self.users[uid]['name'] = message.content
-            await self.messages[message.author.id].edit(
+            await self.messagesS[message.author.id].edit(
                 embed=self.recreate_shopitem_embed(
                     message.author.id,
                     message.author.name,
@@ -84,7 +82,7 @@ class CreateShopItem(Cog):
 
                 await message.channel.send(embed=embed)
 
-                await self.messages[uid].edit(
+                await self.messagesS[uid].edit(
                     embed= self.recreate_shopitem_embed(
                         uid, 
                         uname, 
@@ -93,11 +91,11 @@ class CreateShopItem(Cog):
                     )
                 )
                 self.users.pop(uid)
-                self.messages.pop(uid)
+                self.messagesS.pop(uid)
                 return
             
             self.users[uid]['cost'] = message.content
-            await self.messages[uid].edit(
+            await self.messagesS[uid].edit(
                 embed=self.recreate_shopitem_embed(
                     uid,
                     uname,
@@ -115,7 +113,7 @@ class CreateShopItem(Cog):
 
                 await message.channel.send(embed=embed)
                 
-                await self.messages[uid].edit(
+                await self.messagesS[uid].edit(
                     embed= self.recreate_shopitem_embed(
                         uid,
                         uname,
@@ -124,10 +122,10 @@ class CreateShopItem(Cog):
                     )
                 )
                 self.users.pop(uid)
-                self.messages.pop(uid)
+                self.messagesS.pop(uid)
             
             self.users[uid]['description'] = message.content
-            await self.messages[uid].edit(
+            await self.messagesS[uid].edit(
                 embed= self.recreate_shopitem_embed(
                     uid,
                     uname, 
@@ -149,7 +147,7 @@ class CreateShopItem(Cog):
 
                 await message.channel.send(embed=embed)
 
-                await self.messages[uid].edit(
+                await self.messagesS[uid].edit(
                     embed= self.recreate_shopitem_embed(
                         uid,
                         uname,
@@ -158,7 +156,7 @@ class CreateShopItem(Cog):
                     )
                 )
                 self.users.pop(uid)
-                self.messages.pop(uid)
+                self.messagesS.pop(uid)
                 return
             if role is None and message.content.lower != 'skip':
                 embed = Embed(
@@ -168,7 +166,7 @@ class CreateShopItem(Cog):
                 )
                 await message.channel.send(embed=embed)
 
-                await self.messages[uid].edit(
+                await self.messagesS[uid].edit(
                     embed = self.recreate_shopitem_embed(
                         uid,
                         uname,
@@ -177,11 +175,11 @@ class CreateShopItem(Cog):
                     )
                 )
                 self.users.pop(uid)
-                self.messages.pop(uid)
+                self.messagesS.pop(uid)
                 return
             
             self.users[uid]['required_role'] = rid if message.content.lower() != 'skip' else None
-            await self.messages[uid].edit(
+            await self.messagesS[uid].edit(
                 embed=self.recreate_shopitem_embed(
                     uid,
                     uname,
@@ -194,4 +192,4 @@ class CreateShopItem(Cog):
 
             await message.channel.send(embed=embed)
             self.users.pop(uid)
-            self.messages.pop(uid)
+            self.messagesS.pop(uid)

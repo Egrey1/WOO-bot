@@ -12,10 +12,16 @@ def first_config():
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     deps.PREFIX = ('&', '& ')
-    deps.bot = Bot(command_prefix=deps.PREFIX, intents=ds.Intents.all(), sync_commands=True)
+    deps.bot = Bot(
+        command_prefix=deps.PREFIX, 
+        intents=ds.Intents.all(), 
+        sync_commands=True, 
+        allowed_mentions=ds.AllowedMentions.none()
+    )
+    
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.2 Полнстью исправлены команды &buy, &inv, &shop' 
+    deps.VERSION = '1.4 Обновление графического дизайна для предметов магазина' 
     
     deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row

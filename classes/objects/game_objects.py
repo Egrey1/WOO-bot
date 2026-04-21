@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 import datetime as dt
+from typing import Text
 
 from ..library import deps, logging, Role, Embed, sql_Connection
+from disnake import ButtonStyle
+import disnake.ui as ui
 
 
 class NotFound(LookupError):
@@ -21,7 +24,7 @@ def _require_connection() -> sql_Connection:
 def _normalize_role_id(role: Role | int | None) -> int | None:
     if isinstance(role, Role):
         return role.id
-    return role
+    return role if role != -1 else None
 
 
 class _BaseEntity:
@@ -467,6 +470,109 @@ class ShopItem(_BaseEntity):
         if len(description) <= 200:
             return self.name, description
         return self.name, description[:197] + '...'
+
+    def get_v2component(self, moderator_mode: bool = False) -> list[ui.Container | ui.ActionRow]:
+        if not moderator_mode:
+            return [
+                ui.Container(
+                    ui.TextDisplay('## ' + self.name),
+                    ui.Separator(),
+                    ui.TextDisplay(self.description),
+                    ui.Section(
+                        ui.TextDisplay(f'Стоимость {self.cost_amount}{self.currency.symbol}'),
+                        accessory=ui.Button(
+                            label='Купить', 
+                            style=ButtonStyle.green, 
+                            custom_id=f'buy {self.id}',
+                            emoji='🛒',
+                            disabled= not self.is_active
+                        )
+                    ),
+                    ui.TextDisplay(
+                        f'Требуемая роль: <@&{self.required_role_id}>' if self.required_role_id is not None else 'Требуемая роль: Нет'
+                    )
+                )
+            ]
+        else:
+            return [
+                ui.Container(
+                    ui.Section(
+                        ui.TextDisplay('## ' + self.name),
+                        accessory=ui.Button(
+                            label='Изменить',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'item_edit_name {self.id}',
+                            emoji='⚙️'
+                        )
+                    ),
+                    ui.Separator(),
+                    ui.Section(
+                        ui.TextDisplay(self.description),
+                        accessory=ui.Button(
+                            label='Изменить',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'item_edit_description {self.id}',
+                            emoji='⚙️'
+                        )
+                    ),
+                    ui.Section(
+                        ui.TextDisplay(f'Купить за {self.cost_amount}{self.currency.symbol}'),
+                        accessory=ui.Button(
+                            label='Купить', 
+                            style=ButtonStyle.green, 
+                            custom_id=f'buy {self.id}',
+                            emoji='🛒',
+                            disabled= not self.is_active
+                        )
+                    ),
+                    ui.Section(
+                        ui.TextDisplay(
+                            f'Требуемая роль: <@&{self.required_role_id}>' if self.required_role_id is not None else 'Требуемая роль: Нет'
+                        ),
+                        accessory=ui.Button(
+                            label='Изменить',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'item_edit_role {self.id}',
+                            emoji='⚙️'
+                        )
+                    )
+                ),
+                ui.ActionRow(
+                    ui.Button(
+                        label='Изменить цену',
+                        style=ButtonStyle.blurple,
+                        custom_id=f'item_edit_price {self.id}',
+                        emoji='⚙️'
+                    ),
+                    ui.Button(
+                        label='Удалить',
+                        style=ButtonStyle.danger,
+                        custom_id=f'item_delete {self.id}',
+                        emoji='🗑️'
+                    )
+                )
+            ]
+
+    def get_container(self) -> ui.Container:
+        return ui.Container(
+            ui.TextDisplay('### ' + self.name),
+            ui.Separator(),
+            ui.TextDisplay(self.description if len(self.description[:256] + '...') <= 256 else self.description[:253] + '...'),
+            ui.Section(
+                ui.TextDisplay(f'Стоимость {self.cost_amount}{self.currency.symbol}'),
+                accessory=ui.Button(
+                    label='Купить', 
+                    style=ButtonStyle.green, 
+                    custom_id=f'buy {self.id}',
+                    emoji='🛒',
+                    disabled= not self.is_active
+                )
+            ),
+            ui.TextDisplay(
+                f'Требуемая роль: <@&{self.required_role_id}>' if self.required_role_id is not None else 'Требуемая роль: Нет'
+            ),
+            ui.Separator()
+        )
 
 
 class InventoryItem(_BaseEntity):

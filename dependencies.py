@@ -3,6 +3,7 @@ from disnake.ext.commands import Bot
 from disnake import Embed, Intents, Role
 from typing import List, Tuple
 import datetime as dt
+from disnake.ui import Components, ActionRow
 
 bot: Bot
 intents: Intents
@@ -696,6 +697,47 @@ class ShopItem:
         Заметки:
             Описание автоматически обрезается примерно до 200 символов.
         """
+
+    def get_v2component(self, moderator_mode: bool = False) -> list[Components | ActionRow]:
+        """
+        Возвращает набор компонентов для визуального отображения предмета в UI.
+
+        Метод предназначен для поддержки новой версии клиентского интерфейса,
+        где предметы магазина отображаются через составные UI-компоненты.
+
+        Параметры:
+            отсутствуют.
+
+        Возвращает:
+            `list[object]`
+                Список компонент, необходимых для рендеринга предмета в
+                новой версии интерфейса.
+
+        Заметки:
+            Реализация обычно строит визуальный блок с названием, ценой,
+            описанием и кнопкой покупки.
+        """
+        raise NotImplementedError
+
+    def get_container(self) -> Components:
+        """
+        Возвращает контейнер UI, описывающий предмет магазина.
+
+        Контейнер служит для компактного отображения информации о предметах
+        в интерфейсе: название, цена, описание, требуемая роль и остаток.
+
+        Параметры:
+            отсутствуют.
+
+        Возвращает:
+            `object`
+                Объект контейнера UI для рендеринга предмета.
+
+        Заметки:
+            В зависимости от платформы реализация контейнера может базироваться
+            на `disnake.ui.Container` или другой UI-структуре.
+        """
+        raise NotImplementedError
 
 class InventoryItem:
     """

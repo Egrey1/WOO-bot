@@ -1,7 +1,7 @@
 from ..library import Cog, deps, command, Context, slash_command, Param, Message, Embed, Colour, CommandInteraction
 
 class RemoveResource(Cog):
-    users: dict[int, list[deps.Resource]]
+    users: dict[int, list[deps.Resource]] = {}
     
     @command(name='remove_resource', aliases=['remove-resource'])
     async def remove_resource(self, ctx: Context, resource_name: str = ''):

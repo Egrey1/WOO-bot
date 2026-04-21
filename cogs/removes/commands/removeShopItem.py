@@ -3,7 +3,7 @@ from re import M
 from ..library import deps, Cog, command, Context, CommandInteraction, slash_command, Embed, Param, Colour, Message
 
 class RemoveShopItem(Cog):
-    users: dict[int, list[deps.ShopItem]]
+    users: dict[int, list[deps.ShopItem]] = {}
     
     @command(name='remove_item', aliases=['remove-item'])
     async def remove_resource(self, ctx: Context, item_name: str = ''):
@@ -52,7 +52,7 @@ class RemoveShopItem(Cog):
     
     @remove_resource_slash.autocomplete('предмет')
     async def remove_resource_slash_autocomplete(self, interaction: CommandInteraction, current: str):
-        return [resource.name for resource in deps.Resource.all() if current.lower() in resource.name.lower()][:25]
+        return [item.name for item in deps.ShopItem.all() if current.lower() in item.name.lower()][:25]
     
     @Cog.listener()
     async def on_message(self, message: Message):
