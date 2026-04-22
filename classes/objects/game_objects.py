@@ -939,9 +939,9 @@ class RoleIncome(_BaseEntity):
         seconds -= hours * 3600
         minutes = seconds // 60
         seconds -= minutes * 60
-        form_str = f'{hours} {'часов' if hours > 4 else 'часа' if hours > 1 else 'час'} ' if hours else ''
-        form_str += f'{minutes} {'минут' if minutes > 4 else 'минуты' if minutes > 1 else 'минута'} ' if minutes else ''
-        form_str += f'{seconds} {'секунд' if seconds > 4 else 'секунды' if seconds > 1 else 'секунда'}' if seconds else '' if form_str else 'Нет'
+        form_str = str(hours) + ('часов' if hours > 4 else 'часа' if hours > 1 else 'час' if hours else '')
+        form_str += str(minutes) + ('минут' if minutes > 4 else 'минуты' if minutes > 1 else 'минута'  if minutes else '')
+        form_str += str(seconds) + ('секунд' if seconds > 4 else 'секунды' if seconds > 1 else 'секунда' if seconds else '' if form_str else 'Нет')
         if moderator_mode:
             return [
                 ui.Container(

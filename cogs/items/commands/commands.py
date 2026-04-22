@@ -31,7 +31,7 @@ class ItemCommands(Cog):
             self.cost = cost
             self.role = role
             self.message = message_to_edit
-            self.components = components # type: ignore
+            self.acti = components # type: ignore
 
             self.option = TextInput(
                 label=option_name, 
@@ -67,7 +67,7 @@ class ItemCommands(Cog):
                 try:
                     if not value:
                         self.item.edit(required_role=-1)
-                    elif interaction.guild.fetch_role(int(value)): # type: ignore
+                    elif interaction.guild.get_role(int(value)):  # type: ignore
                         self.item.edit(required_role=int(value))  
                     else:
                         await interaction.response.send_message('Отмена, роль не найдена', ephemeral=True)
@@ -76,13 +76,11 @@ class ItemCommands(Cog):
                     await interaction.response.send_message('Отмена, ожидалось число', ephemeral=True)
                     return
             
-            components = self.item.get_v2component(True) 
-            # await interaction.response.defer(with_message=False)
+            components = self.item.get_v2component(True) + self.acti 
             await interaction.response.edit_message(
                 components=components,  # type: ignore
                 flags=MessageFlags(is_components_v2=True)
             )
-            await interaction.followup.send('Успешно изменено', ephemeral=True)
 
     class BuyModal(Modal):
         def __init__(self, item: deps.ShopItem, balance: int = 0):
@@ -90,7 +88,7 @@ class ItemCommands(Cog):
 
             self.count = TextInput(
                 label='Введите количество', 
-                placeholder=f'0..{(balance // item.cost_amount) if item.cost_amount else 'inf'}', 
+                placeholder='0..'+ str((balance // item.cost_amount) if item.cost_amount else 'inf'), 
                 required=True,
                 custom_id='count'
             )
