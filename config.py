@@ -23,7 +23,7 @@ def first_config():
     deps.MAIN_CURRENCY_ID = 1
     deps.VERSION = '1.6 Удаление всего лишнего хлама и исправление ошибок' 
     
-    deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
+    deps.main_db = cls.NewConnection('databases2/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row
 
     deps.Resource = cls.Resource

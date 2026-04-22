@@ -1,6 +1,4 @@
 venv
 .env
-databases
-/databases
-databases/
-main.db
+databases2
+/databases2
