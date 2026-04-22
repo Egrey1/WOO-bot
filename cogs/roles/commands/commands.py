@@ -1,8 +1,61 @@
-from ..library import Cog, deps, command, Context, asyncio, Role, Embed, Colour, ActionRow, Button, ButtonStyle, MessageInteraction, MessageFlags
+from ..library import Cog, deps, command, Context, asyncio, Role, Embed, Colour, ActionRow, Button, ButtonStyle, MessageInteraction, MessageFlags, Modal, TextInput, ModalInteraction 
 
 class RolesCommands(Cog):
+    creates: list[int] = []
     
-    @command('role-income', aliases=['role_income'])
+    class EditRolesModal(Modal):
+        def __init__(
+                self, 
+                roleincome: deps.RoleIncome, 
+                option_name: str,
+                lists: list[ActionRow],
+                cooldown: bool = False, 
+                income: bool = False
+        ):
+            self.roleincome = roleincome
+            self.cooldown = cooldown
+            self.income = income
+            self.lists = lists
+
+            self.option = TextInput(
+                label=option_name,
+                placeholder=('1s; 2m; 3h - одна секунда, две минуты, три часа' if cooldown else None),
+                custom_id='role_edit'
+            )
+            super().__init__(title=f'Редактирование {option_name}', components=[self.option])
+        
+        async def callback(self, interaction: ModalInteraction):
+            value = interaction.text_values['role_edit']
+            if self.cooldown:
+                if value[-1] not in 'smh':
+                    value += 'h'
+                if not value[:-1].isdigit():
+                    await interaction.response.send_message('Ожидалось число!', ephemeral=True)
+                    return
+
+                if value[-1] == 's':
+                    self.roleincome.edit(cooldown_seconds=int(value[:-1]))
+                elif value[-1] == 'm':
+                    self.roleincome.edit(cooldown_seconds=int(value[:-1]) * 60)
+                elif value[-1] == 'h':
+                    self.roleincome.edit(cooldown_seconds=int(value[:-1]) * 3600)
+            
+            elif self.income:
+                if not value.isdigit():
+                    await interaction.response.send_message('Ожидалось число!', ephemeral=True)
+                    return
+                self.roleincome.edit(currency_amount=int(value))
+
+            components = self.roleincome.get_v2component(True) + self.lists
+            await interaction.response.defer(with_message=False)
+            await interaction.message.edit( # type: ignore
+                components= components,  # type: ignore
+                flags=MessageFlags(is_components_v2=True)) 
+
+
+            
+    
+    @command('role-income', aliases=['role_income', 'role', 'income'])
     async def role_income(self, ctx: Context, role: Role | None = None):
         if role:
             roleincome = role.get_role_information()
@@ -11,10 +64,9 @@ class RolesCommands(Cog):
                     components = [
                         ActionRow(
                             Button(
-                                label='Создать роль',
-                                style=ButtonStyle.green,
+                                label='Создать роль заработка',
                                 custom_id='role_create_role ' + str(role.id),
-                                emoji='✅'
+                                emoji='👆'
                             )
                         )
                     ]
@@ -32,27 +84,48 @@ class RolesCommands(Cog):
         custom_id = interaction.component.custom_id.split()
         option = custom_id[0]
 
+        
+
         if 'role_edit' in option:
-            if '_role' in option:
-                pass
-            elif 'cooldown' in option:
-                pass
+            roleincome = deps.RoleIncome(int(custom_id[1]))
+            components = [
+                ActionRow(
+                    Button(
+                        label='Завершить создание',
+                        style=ButtonStyle.green,
+                        custom_id='role_create_role_complete ' + str(roleincome.id),
+                        emoji='✅'
+                    ),
+                    Button(
+                        label='Отменить создание',
+                        style=ButtonStyle.red,
+                        custom_id='role_delete  ' + str(roleincome.id),
+                        emoji='❎'
+                    )
+                )
+            ]
+            if 'cooldown' in option:
+                modal = self.EditRolesModal(roleincome, 'Кулдаун', [] if not (roleincome.id in self.creates) else components, cooldown=True)
+                await interaction.response.send_modal(modal)
+
             elif 'income' in option:
-                pass
+                modal = self.EditRolesModal(roleincome, 'Заработок', [] if not (roleincome.id in self.creates) else components, income=True)
+                await interaction.response.send_modal(modal)
             
 
         if option == 'role_create_role':
             if True: # Проверка прав
                 roleincome = deps.RoleIncome.create(
                     int(custom_id[1]),
-                    0,
+                    1,
                     deps.MAIN_CURRENCY_ID,
                     0,
                     None,
                     False
                 )
+                self.creates.append(roleincome.id)
                 components = roleincome.get_v2component(True)
-                components += [
+                components.append(
                     ActionRow(
                         Button(
                             label='Завершить создание',
@@ -63,17 +136,18 @@ class RolesCommands(Cog):
                         Button(
                             label='Отменить создание',
                             style=ButtonStyle.red,
-                            custom_id='role_delete ' + str(roleincome.id),
+                            custom_id='role_delete  ' + str(roleincome.id),
                             emoji='❎'
                         )
                     )
-                ]
+                )
                 await interaction.message.edit(components=components, flags=MessageFlags(is_components_v2=True)) # type: ignore
         
         if option == 'role_create_role_complete':
             if True:
                 roleincome = deps.RoleIncome(int(custom_id[1]))
                 roleincome.edit(is_active=True)
+                self.creates.remove(roleincome.id)
                 await interaction.message.edit(components=roleincome.get_v2component(), flags=MessageFlags(is_components_v2=True)) # type: ignore
         
         if option == 'role_delete':

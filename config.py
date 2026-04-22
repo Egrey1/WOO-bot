@@ -21,7 +21,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.5 Почти сделан аналог !item для role-income. Так же был изменен префикс на !' 
+    deps.VERSION = '1.5 Исправлено создание предметов и доделана !role-income. Так же были добавлены aliase команды для !role-income' 
     
     deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row

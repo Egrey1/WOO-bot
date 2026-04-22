@@ -1,5 +1,3 @@
-from email import message
-
 from ..library import deps, command, Context, Embed, Cog, AllowedMentions, Colour, View, Button, MessageInteraction, Message
 
 class ShopCommand(Cog):

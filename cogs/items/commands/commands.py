@@ -4,6 +4,7 @@ class ItemCommands(Cog):
     find_items: dict[int, list[deps.ShopItem]] = {}
     waiting_users: dict[int, tuple[int, asyncio.Task]] = {}  # user_id: (channel_id, timeout_task)
     original_messages: dict[int, Message] = {}
+    creates: list[int] = []
 
     def _error_embed(self, title: str, description: str):
         return Embed(
@@ -18,6 +19,7 @@ class ItemCommands(Cog):
                 item: deps.ShopItem, 
                 option_name: str, 
                 message_to_edit: Message,
+                components: list[ActionRow],
                 name: bool = False, 
                 desc: bool = False, 
                 cost: bool = False, 
@@ -29,6 +31,7 @@ class ItemCommands(Cog):
             self.cost = cost
             self.role = role
             self.message = message_to_edit
+            self.components = components # type: ignore
 
             self.option = TextInput(
                 label=option_name, 
@@ -73,11 +76,13 @@ class ItemCommands(Cog):
                     await interaction.response.send_message('Отмена, ожидалось число', ephemeral=True)
                     return
             
-            await self.message.edit(
-                components=self.item.get_v2component(True), # type: ignore
+            components = self.item.get_v2component(True) 
+            # await interaction.response.defer(with_message=False)
+            await interaction.response.edit_message(
+                components=components,  # type: ignore
                 flags=MessageFlags(is_components_v2=True)
             )
-            await interaction.response.send_message('Успешно изменено', ephemeral=True)
+            await interaction.followup.send('Успешно изменено', ephemeral=True)
 
     class BuyModal(Modal):
         def __init__(self, item: deps.ShopItem, balance: int = 0):
@@ -111,7 +116,7 @@ class ItemCommands(Cog):
             await interaction.response.send_message(f'Вы успешно приобрели {count} {self.item.name}', ephemeral=True) 
 
     @command(name='item')
-    async def item_command(self, ctx: Context, name: str = ''):
+    async def item_command(self, ctx: Context, *, name: str = ''):
         items = [item for item in deps.ShopItem.all() if name.lower() in item.name.lower()]
 
         if len(items) <= 1:
@@ -142,6 +147,7 @@ class ItemCommands(Cog):
 
             timeout_task = asyncio.create_task(self._timeout_handler(ctx))
             self.waiting_users[ctx.author.id] = (ctx.channel.id, timeout_task)
+            
     
     async def _timeout_handler(self, ctx: Context):
         await asyncio.sleep(30)
@@ -223,20 +229,36 @@ class ItemCommands(Cog):
 
         elif 'item_edit' in option:
             item = deps.ShopItem(custom_id.split()[1])
+            components = [
+                ActionRow(
+                    Button(
+                        label='Завершить создание',
+                        style=ButtonStyle.green,
+                        custom_id=f'item_create_complete {item.id}',
+                        emoji='✅'
+                    ),
+                    Button(
+                        label='Отменить создание',
+                        style=ButtonStyle.red,
+                        custom_id=f'item_delete  {item.id}',
+                        emoji='❎'
+                    )
+                )
+            ]
             if 'name' in option:
-                modal = self.EditsModal(item, 'Название', interaction.message, name=True)
+                modal = self.EditsModal(item, 'Название', interaction.message, [] if not (item.id in self.creates) else components, name=True)
                 await interaction.response.send_modal(modal)
 
             elif 'description' in option:
-                modal = self.EditsModal(item, 'Описание', interaction.message, desc=True)
+                modal = self.EditsModal(item, 'Описание', interaction.message, [] if not (item.id in self.creates) else components, desc=True)
                 await interaction.response.send_modal(modal)
 
             elif 'price' in option:
-                modal = self.EditsModal(item, 'Стоимость', interaction.message, cost=True)
+                modal = self.EditsModal(item, 'Стоимость', interaction.message, [] if not (item.id in self.creates) else components, cost=True)
                 await interaction.response.send_modal(modal)
 
             elif 'role' in option:
-                modal = self.EditsModal(item, 'Требуемая роль', interaction.message, role=True)
+                modal = self.EditsModal(item, 'Требуемая роль', interaction.message, [] if not (item.id in self.creates) else components, role=True)
                 await interaction.response.send_modal(modal)
         
         elif option == 'delete':
@@ -248,6 +270,7 @@ class ItemCommands(Cog):
             await interaction.response.defer()
             name = ' '.join(custom_id.split()[1:])
             item = deps.ShopItem.create(name, 'Описание', 0, None, deps.MAIN_CURRENCY_ID, is_active=False)
+            self.creates.append(item.id)
             components = item.get_v2component(True)
             components += [
                 ActionRow(
@@ -260,7 +283,7 @@ class ItemCommands(Cog):
                     Button(
                         label='Отменить создание',
                         style=ButtonStyle.red,
-                        custom_id=f'delete {item.id}',
+                        custom_id=f'item_delete  {item.id}',
                         emoji='❎'
                     )
                 )
@@ -274,6 +297,7 @@ class ItemCommands(Cog):
         elif option == 'item_create_complete':
             item = deps.ShopItem(custom_id.split()[1])
             item.edit(is_active=True)
+            self.creates.remove(item.id)
             await interaction.message.edit(
                 components=item.get_v2component(), # type: ignore
                 flags=MessageFlags(is_components_v2=True)

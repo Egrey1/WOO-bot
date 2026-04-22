@@ -12,6 +12,9 @@ class ComponentsTests(Cog):
                 ui.TextDisplay('## Заголовок 2'),
                 ui.TextDisplay('### Заголовок 3'),
                 ui.Separator(),
+                ui.Separator(),
+                ui.Separator(),
+                ui.Separator(),
                 ui.Section(
                     ui.TextDisplay('Текст длинный оооооооооооооооооооооооооооооооооооооооооооооооооо'),
                     accessory= ui.Button(label='Кнопка')

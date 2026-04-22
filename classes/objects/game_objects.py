@@ -339,6 +339,7 @@ class ShopItem(_BaseEntity):
         self.created_at = str(row['created_at'])
         self.updated_at = str(row['updated_at'])
         self.currency = Currency(self.cost_currency_id)
+        self.buy_mode = False
 
     @classmethod
     def all(cls, active_only: bool = False) -> list['ShopItem']:
@@ -944,15 +945,7 @@ class RoleIncome(_BaseEntity):
         if moderator_mode:
             return [
                 ui.Container(
-                    ui.Section(
-                        ui.TextDisplay('## <@&' + str(self.role_id) + '>'),
-                        accessory=ui.Button(
-                            label='Изменить', 
-                            style=ButtonStyle.blurple, 
-                            custom_id=f'role_edit_role {self.id}',
-                            emoji='⚙️'
-                        )
-                    ),
+                    ui.TextDisplay('## <@&' + str(self.role_id) + '>'),
                     ui.Separator(),
                     ui.Section(
                         ui.TextDisplay(
