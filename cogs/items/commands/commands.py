@@ -1,5 +1,3 @@
-from argparse import Action
-
 from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button
 
 class ItemCommands(Cog):
@@ -87,7 +85,7 @@ class ItemCommands(Cog):
 
             self.count = TextInput(
                 label='Введите количество', 
-                placeholder=f'0..{(balance // item.cost_amount) if item.cost_amount else '∞'}', 
+                placeholder=f'0..{(balance // item.cost_amount) if item.cost_amount else 'inf'}', 
                 required=True,
                 custom_id='count'
             )
@@ -102,7 +100,7 @@ class ItemCommands(Cog):
             count = (int(count) ** 2) ** 0.5
             balance = interaction.user.get_balance()[deps.MAIN_CURRENCY_ID].amount or 0
 
-            if not self.item.cost_amount or (count > (balance // (self.item.cost_amount))):
+            if self.item.cost_amount and (count > (balance // (self.item.cost_amount))):
                 await interaction.response.send_message('Слишком дорого', ephemeral=True)
                 return
             
@@ -244,6 +242,7 @@ class ItemCommands(Cog):
         elif option == 'delete':
             item = deps.ShopItem(custom_id.split()[1])
             # item.delete()
+            await interaction.message.delete()
 
         elif option == 'item_create':
             await interaction.response.defer()

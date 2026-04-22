@@ -1,6 +1,6 @@
 from sqlite3 import Connection
 from disnake.ext.commands import Bot
-from disnake import Embed, Intents, Role
+from disnake import Component, Embed, Intents, Role
 from typing import List, Tuple
 import datetime as dt
 from disnake.ui import Components, ActionRow
@@ -1083,6 +1083,9 @@ class RoleIncome:
             Метод использует upsert-логику: запись создается, если ее не было,
             и обновляется, если она уже существует.
         """
+    
+    def get_v2component(self, moderator_mode: bool = False) -> list[Component | ActionRow]: # type: ignore
+        pass
 
 class _UserBalance(dict[int, Currency]):
     """

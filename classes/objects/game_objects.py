@@ -932,6 +932,72 @@ class RoleIncome(_BaseEntity):
             connect.commit()
             cursor.close()
 
+    def get_v2component(self, moderator_mode: bool = False):
+        seconds = self.cooldown_seconds
+        hours = seconds // 3600
+        seconds -= hours * 3600
+        minutes = seconds // 60
+        seconds -= minutes * 60
+        form_str = f'{hours} {'часов' if hours > 4 else 'часа' if hours > 1 else 'час'} ' if hours else ''
+        form_str += f'{minutes} {'минут' if minutes > 4 else 'минуты' if minutes > 1 else 'минута'} ' if minutes else ''
+        form_str += f'{seconds} {'секунд' if seconds > 4 else 'секунды' if seconds > 1 else 'секунда'}' if seconds else '' if form_str else 'Нет'
+        if moderator_mode:
+            return [
+                ui.Container(
+                    ui.Section(
+                        ui.TextDisplay('## <@&' + str(self.role_id) + '>'),
+                        accessory=ui.Button(
+                            label='Изменить', 
+                            style=ButtonStyle.blurple, 
+                            custom_id=f'role_edit_role {self.id}',
+                            emoji='⚙️'
+                        )
+                    ),
+                    ui.Separator(),
+                    ui.Section(
+                        ui.TextDisplay(
+                             'Кулдаун: ' + form_str
+                        ),
+                        accessory=ui.Button(
+                            label='Изменить', 
+                            style=ButtonStyle.blurple, 
+                            custom_id=f'role_edit_cooldown {self.id}',
+                            emoji='⚙️'
+                        )
+                    ),
+                    ui.Section(
+                        ui.TextDisplay(
+                            f'Заработок: ' + (str(self.currency_amount) + (self.currency.symbol or '')) if self.currency else (self.resources[0][0].name + ' x ' + str(self.resources[0][1]))
+                        ),
+                        accessory=ui.Button(
+                            label='Изменить', 
+                            style=ButtonStyle.blurple, 
+                            custom_id=f'role_edit_income {self.id}',
+                            emoji='⚙️'
+                        )
+                    )
+                ),
+                ui.ActionRow(
+                    ui.Button(
+                        label='Удалить',
+                        style=ButtonStyle.danger,
+                        custom_id=f'role_delete {self.id}',
+                        emoji='🗑️'
+                    )
+                )
+            ]
+
+        return [
+            ui.Container(
+                ui.TextDisplay('## <@&' + str(self.role_id) + '>'),
+                ui.Separator(),
+                ui.TextDisplay('Кулдаун: ' + form_str),
+                ui.TextDisplay(
+                    f'Заработок: ' + (str(self.currency_amount) + (self.currency.symbol or '')) if self.currency else (self.resources[0][0].name + ' x ' + str(self.resources[0][1]))
+                ),
+            )
+        ]
+
 
 class _UserEntityMap(dict[int, object]):
     table_name: str = ''

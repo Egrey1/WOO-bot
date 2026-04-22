@@ -11,7 +11,7 @@ import classes as cls
 def first_config():
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    deps.PREFIX = ('&', '& ')
+    deps.PREFIX = ('!', '! ')
     deps.bot = Bot(
         command_prefix=deps.PREFIX, 
         intents=ds.Intents.all(), 
@@ -21,7 +21,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.4 микрофикс' 
+    deps.VERSION = '1.5 Почти сделан аналог !item для role-income. Так же был изменен префикс на !' 
     
     deps.main_db = cls.NewConnection('databases/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row

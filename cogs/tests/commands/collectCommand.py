@@ -16,7 +16,7 @@ class CollectCommand(Cog):
         for role in ctx.author.roles: # type: ignore
             roleincome = role.get_role_information()
 
-            if roleincome:
+            if roleincome and roleincome.is_active:
                 last_claim: dt.datetime = roleincome.get_last_claim_at(ctx.author.id)
                 now = dt.datetime.now()
                 if (last_claim is not None) and (now - last_claim).total_seconds() < roleincome.cooldown_seconds:
