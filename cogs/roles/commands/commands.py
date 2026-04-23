@@ -57,10 +57,15 @@ class RolesCommands(Cog):
     
     @command('role-income', aliases=['role_income', 'role', 'income'])
     async def role_income(self, ctx: Context, role: Role | None = None):
+        rights = deps.Rights()
+        moderator_mode = (
+                ctx.author.guild_permissions.administrator or  # type: ignore
+                rights.is_administrator(ctx.author) or  
+                rights.is_manage_rincomes(ctx.author))
         if role:
             roleincome = role.get_role_information()
             if not roleincome:
-                if True: # Проверка прав
+                if moderator_mode: 
                     components = [
                         ActionRow(
                             Button(
@@ -72,18 +77,38 @@ class RolesCommands(Cog):
                     ]
                     await ctx.send(components=components, flags=MessageFlags(is_components_v2=True))
                     return
+                else:
+                    await ctx.send(embed=Embed(
+                        title='Ошибка',
+                        description='Эта роль ни к чему не привязана или у вас нет прав создавать новую роль для заработка'
+                    ))
 
-            await ctx.send(components=roleincome.get_v2component(True), flags=MessageFlags(is_components_v2=True)) # type: ignore
+            await ctx.send(components=roleincome.get_v2component(moderator_mode), flags=MessageFlags(is_components_v2=True)) # type: ignore
     
 
     @Cog.listener()
     async def on_button_click(self, interaction: MessageInteraction):
         if not interaction.component.custom_id:
             return
+        if 'role' not in interaction.component.custom_id:
+            return
         
         custom_id = interaction.component.custom_id.split()
         option = custom_id[0]
+        rights = deps.Rights()
+        moderator_mode = (
+                interaction.user.guild_permissions.administrator or  # type: ignore
+                rights.is_administrator(interaction.user) or  
+                rights.is_manage_rincomes(interaction.user))
 
+        if not moderator_mode:
+            await interaction.response.send_message(embed=Embed(
+                title='Ошибка прав',
+                description='У вас нет прав для выполнения этой команды',
+                colour=Colour.red()
+            ), ephemeral=True)
+            # await interaction.response.defer(with_message=False)
+            return
         
 
         if 'role_edit' in option:
@@ -114,34 +139,33 @@ class RolesCommands(Cog):
             
 
         if option == 'role_create_role':
-            if True: # Проверка прав
-                roleincome = deps.RoleIncome.create(
-                    int(custom_id[1]),
-                    1,
-                    deps.MAIN_CURRENCY_ID,
-                    0,
-                    None,
-                    False
-                )
-                self.creates.append(roleincome.id)
-                components = roleincome.get_v2component(True)
-                components.append(
-                    ActionRow(
-                        Button(
-                            label='Завершить создание',
-                            style=ButtonStyle.green,
-                            custom_id='role_create_role_complete ' + str(roleincome.id),
-                            emoji='✅'
-                        ),
-                        Button(
-                            label='Отменить создание',
-                            style=ButtonStyle.red,
-                            custom_id='role_delete  ' + str(roleincome.id),
-                            emoji='❎'
-                        )
+            roleincome = deps.RoleIncome.create(
+                int(custom_id[1]),
+                1,
+                deps.MAIN_CURRENCY_ID,
+                0,
+                None,
+                False
+            )
+            self.creates.append(roleincome.id)
+            components = roleincome.get_v2component(True)
+            components.append(
+                ActionRow(
+                    Button(
+                        label='Завершить создание',
+                        style=ButtonStyle.green,
+                        custom_id='role_create_role_complete ' + str(roleincome.id),
+                        emoji='✅'
+                    ),
+                    Button(
+                        label='Отменить создание',
+                        style=ButtonStyle.red,
+                        custom_id='role_delete  ' + str(roleincome.id),
+                        emoji='❎'
                     )
                 )
-                await interaction.message.edit(components=components, flags=MessageFlags(is_components_v2=True)) # type: ignore
+            )
+            await interaction.message.edit(components=components, flags=MessageFlags(is_components_v2=True)) # type: ignore
         
         if option == 'role_create_role_complete':
             if True:
@@ -153,7 +177,8 @@ class RolesCommands(Cog):
         if option == 'role_delete':
             if True:
                 roleincome = deps.RoleIncome(int(custom_id[1]))
-                # roleincome.delete()
+                roleincome.delete()
                 await interaction.message.delete()
+                await interaction.response.send_message('Роль удалена')
         
             

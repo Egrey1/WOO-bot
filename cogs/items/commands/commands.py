@@ -1,4 +1,4 @@
-from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button
+from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View
 
 class ItemCommands(Cog):
     find_items: dict[int, list[deps.ShopItem]] = {}
@@ -116,10 +116,15 @@ class ItemCommands(Cog):
     @command(name='item')
     async def item_command(self, ctx: Context, *, name: str = ''):
         items = [item for item in deps.ShopItem.all() if name.lower() in item.name.lower()]
+        rights = deps.Rights()
+        moderator_mode = (
+                ctx.author.guild_permissions.administrator or  # type: ignore
+                rights.is_administrator(ctx.author) or  
+                rights.is_manage_items(ctx.author))
+        components = items[0].get_v2component(moderator_mode) if items else []
 
         if len(items) <= 1:
-            components = items[0].get_v2component(True) if items else []
-            if (not items or items[0].name != name) and True: # Проверка на модератора
+            if (not items or items[0].name != name) and moderator_mode and name: 
                 components += [
                     ActionRow(
                         Button(
@@ -130,9 +135,12 @@ class ItemCommands(Cog):
                     )
                 ]
 
-            await ctx.send(
-                components=components,  # type: ignore
-                flags=MessageFlags(is_components_v2=True)) 
+            if components:
+                await ctx.send(
+                    components=components,  # type: ignore
+                    flags=MessageFlags(is_components_v2=True)) 
+            else:
+                await ctx.send(embed=self._error_embed('Ошибка', 'Предмет не найден'))
             
 
         else:
@@ -141,7 +149,17 @@ class ItemCommands(Cog):
                 title="Выберите предмет",
                 description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id]))
             )
-            self.original_messages[ctx.author.id] = await ctx.send(embed=embed)
+            if name and moderator_mode:
+                view = View()
+                but = Button(
+                    label='Создать новый предмет',
+                    custom_id=f'item_create {name}',
+                    emoji='👆'
+                )
+                view.add_item(but)
+                self.original_messages[ctx.author.id] = await ctx.send(embed=embed, view=view)
+            else:
+                self.original_messages[ctx.author.id] = await ctx.send(embed=embed)
 
             timeout_task = asyncio.create_task(self._timeout_handler(ctx))
             self.waiting_users[ctx.author.id] = (ctx.channel.id, timeout_task)
@@ -168,6 +186,12 @@ class ItemCommands(Cog):
         channel_id, timeout_task = self.waiting_users[message.author.id]
         if message.channel.id != channel_id:
             return
+        
+        rights = deps.Rights()
+        moderator_mode = (
+                message.author.guild_permissions.administrator or  # type: ignore
+                rights.is_administrator(message.author) or  
+                rights.is_manage_items(message.author))
         
         if not message.content.isdigit():
             embed = Embed(
@@ -199,7 +223,10 @@ class ItemCommands(Cog):
         
         # Обработка выбора
         selected_item = items[index]
-        await self.original_messages[message.author.id].edit(components=selected_item.get_v2component(True), flags=MessageFlags(is_components_v2=True), embed=None) # type: ignore
+        await self.original_messages[message.author.id].edit(
+            components=selected_item.get_v2component(moderator_mode), # type: ignore
+            flags=MessageFlags(is_components_v2=True), 
+            embed=None, view=None)
         
         # Очищаем данные
         del self.waiting_users[message.author.id]
@@ -211,8 +238,18 @@ class ItemCommands(Cog):
             return
         custom_id = interaction.component.custom_id
         option = custom_id.split()[0]
+        rights = deps.Rights()
 
-        if option == 'buy':
+        if 'item' not in custom_id:
+            return
+        
+        rights = deps.Rights()
+        moderator_mode = (
+                interaction.user.guild_permissions.administrator or  # type: ignore
+                rights.is_administrator(interaction.user) or  
+                rights.is_manage_items(interaction.user))
+
+        if option == 'item_buy':
             item = deps.ShopItem(custom_id.split()[1])
             flag = False
             if item.required_role_id is not None:
@@ -224,8 +261,12 @@ class ItemCommands(Cog):
             modal = self.BuyModal(item, interaction.user.get_balance()[deps.MAIN_CURRENCY_ID].amount or 0)
             await interaction.response.send_modal(modal)
 
+        if not moderator_mode:
+            await interaction.response.send_message(embed=self._error_embed('Ошибка прав', 'У вас нет прав для выполнения этой команды'), ephemeral=True)
+            # await interaction.response.defer(with_message=False)
+            return
 
-        elif 'item_edit' in option:
+        if 'item_edit' in option:
             item = deps.ShopItem(custom_id.split()[1])
             components = [
                 ActionRow(
@@ -259,10 +300,11 @@ class ItemCommands(Cog):
                 modal = self.EditsModal(item, 'Требуемая роль', interaction.message, [] if not (item.id in self.creates) else components, role=True)
                 await interaction.response.send_modal(modal)
         
-        elif option == 'delete':
+        elif option == 'item_delete':
             item = deps.ShopItem(custom_id.split()[1])
-            # item.delete()
+            item.delete()
             await interaction.message.delete()
+            await interaction.response.send_message('Предмет удален', ephemeral=True)
 
         elif option == 'item_create':
             await interaction.response.defer()
@@ -287,10 +329,17 @@ class ItemCommands(Cog):
                 )
             ]
 
-            await interaction.message.edit(
-                components=components, # type: ignore 
-                flags=MessageFlags(is_components_v2=True)
-            )
+            if interaction.message.flags.is_components_v2:
+                await interaction.message.edit(
+                    components=components, # type: ignore 
+                    flags=MessageFlags(is_components_v2=True)
+                )
+            else:
+                await interaction.message.delete()
+                await interaction.send(
+                    components=components, # type: ignore 
+                    flags=MessageFlags(is_components_v2=True)
+                )
 
         elif option == 'item_create_complete':
             item = deps.ShopItem(custom_id.split()[1])

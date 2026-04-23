@@ -5,7 +5,7 @@ import datetime as dt
 from typing import Text
 
 from ..library import deps, logging, Role, Embed, sql_Connection
-from disnake import ButtonStyle
+from disnake import ButtonStyle, Member
 import disnake.ui as ui
 
 
@@ -18,6 +18,13 @@ def _require_connection() -> sql_Connection:
     connection = getattr(deps, 'main_db', None)
     if connection is None:
         raise RuntimeError('База данных не инициализирована')
+    return connection
+
+
+def _require_rights_connection() -> sql_Connection:
+    connection = getattr(deps, 'rights', None)
+    if connection is None:
+        raise RuntimeError('База данных прав не инициализирована')
     return connection
 
 
@@ -47,6 +54,174 @@ class _BaseEntity:
             rows = cursor.fetchall()
             cursor.close()
         return rows
+
+
+class Rights:
+    """"""
+
+    fields = (
+        'manage_items',
+        'manage_rincomes',
+        'manage_resources',
+        'administrator',
+    )
+
+    def __init__(self) -> None:
+        self._ensure_row()
+        self._reload()
+
+    @staticmethod
+    def _parse(raw_value: str | None) -> list[int]:
+        if not raw_value:
+            return []
+        return [int(role_id) for role_id in raw_value.split(';') if role_id]
+
+    @staticmethod
+    def _serialize(role_ids: list[int]) -> str:
+        normalized = []
+        seen: set[int] = set()
+        for role_id in role_ids:
+            normalized_id = int(role_id)
+            if normalized_id not in seen:
+                normalized.append(normalized_id)
+                seen.add(normalized_id)
+        return ';'.join(str(role_id) for role_id in normalized)
+
+    def _ensure_row(self) -> None:
+        with _require_rights_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute("SELECT COUNT(*) AS count FROM rights")
+            count = int(cursor.fetchone()['count'])
+            if count == 0:
+                cursor.execute(
+                    """
+                    INSERT INTO rights (manage_items, manage_rincomes, manage_resources, administrator)
+                    VALUES ('', '', '', '')
+                    """
+                )
+                connect.commit()
+            cursor.close()
+
+    def _reload(self) -> None:
+        with _require_rights_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                SELECT manage_items, manage_rincomes, manage_resources, administrator
+                FROM rights
+                LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            cursor.close()
+
+        if row is None:
+            raise RuntimeError('Не удалось загрузить права из базы данных')
+
+        for field in self.fields:
+            setattr(self, field, self._parse(row[field]))
+
+    def _validate_field(self, field: str) -> None:
+        if field not in self.fields:
+            raise ValueError(f'Неизвестное поле прав: {field}')
+
+    def _save_field(self, field: str, role_ids: list[int]) -> list[int]:
+        self._validate_field(field)
+        serialized = self._serialize(role_ids)
+        with _require_rights_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                f"""
+                UPDATE rights
+                SET {field} = ?
+                """,
+                (serialized,),
+            )
+            connect.commit()
+            cursor.close()
+
+        parsed = self._parse(serialized)
+        setattr(self, field, parsed)
+        return parsed
+
+    def get(self, field: str) -> list[int]:
+        self._validate_field(field)
+        return list(getattr(self, field))
+
+    def add(self, field: str, role_id: int) -> list[int]:
+        current = self.get(field)
+        normalized_role_id = int(role_id)
+        if normalized_role_id not in current:
+            current.append(normalized_role_id)
+        return self._save_field(field, current)
+
+    def remove(self, field: str, role_id: int) -> list[int]:
+        normalized_role_id = int(role_id)
+        current = [saved_role_id for saved_role_id in self.get(field) if saved_role_id != normalized_role_id]
+        return self._save_field(field, current)
+
+    def set(self, field: str, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self._save_field(field, [int(role_id) for role_id in role_ids])
+
+    def get_manage_items(self) -> list[int]:
+        return self.get('manage_items')
+
+    def add_manage_items(self, role_id: int) -> list[int]:
+        return self.add('manage_items', role_id)
+
+    def remove_manage_items(self, role_id: int) -> list[int]:
+        return self.remove('manage_items', role_id)
+
+    def set_manage_items(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self.set('manage_items', role_ids)
+
+    def get_manage_rincomes(self) -> list[int]:
+        return self.get('manage_rincomes')
+
+    def add_manage_rincomes(self, role_id: int) -> list[int]:
+        return self.add('manage_rincomes', role_id)
+
+    def remove_manage_rincomes(self, role_id: int) -> list[int]:
+        return self.remove('manage_rincomes', role_id)
+
+    def set_manage_rincomes(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self.set('manage_rincomes', role_ids)
+
+    def get_manage_resources(self) -> list[int]:
+        return self.get('manage_resources')
+
+    def add_manage_resources(self, role_id: int) -> list[int]:
+        return self.add('manage_resources', role_id)
+
+    def remove_manage_resources(self, role_id: int) -> list[int]:
+        return self.remove('manage_resources', role_id)
+
+    def set_manage_resources(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self.set('manage_resources', role_ids)
+
+    def get_administrator(self) -> list[int]:
+        return self.get('administrator')
+
+    def add_administrator(self, role_id: int) -> list[int]:
+        return self.add('administrator', role_id)
+
+    def remove_administrator(self, role_id: int) -> list[int]:
+        return self.remove('administrator', role_id)
+
+    def set_administrator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self.set('administrator', role_ids)
+
+    def is_manage_items(self, user: Member) -> bool:
+        return any([role.id in self.get_manage_items() for role in user.roles])
+    
+    def is_manage_rincomes(self, user: Member) -> bool:
+        return any([role.id in self.get_manage_rincomes() for role in user.roles])
+    
+    def is_manage_resources(self, user: Member) -> bool:
+        return any([role.id in self.get_manage_resources() for role in user.roles])
+    
+    def is_administrator(self, user: Member) -> bool:
+        return any([role.id in self.get_administrator() for role in user.roles])
 
 
 class Currency(_BaseEntity):
@@ -310,6 +485,35 @@ class Resource(_BaseEntity):
 
         self.__init__(self.id)
 
+    def delete(self) -> None:
+        """"""
+
+        with _require_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                DELETE FROM user_resources
+                WHERE resource_id = ?
+                """,
+                (self.id,),
+            )
+            cursor.execute(
+                """
+                DELETE FROM role_income_resources
+                WHERE resource_id = ?
+                """,
+                (self.id,),
+            )
+            cursor.execute(
+                """
+                DELETE FROM resources
+                WHERE id = ?
+                """,
+                (self.id,),
+            )
+            connect.commit()
+            cursor.close()
+
 
 class ShopItem(_BaseEntity):
     """"""
@@ -453,6 +657,28 @@ class ShopItem(_BaseEntity):
 
         self.__init__(self.id)
 
+    def delete(self) -> None:
+        """"""
+
+        with _require_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                DELETE FROM user_inventory
+                WHERE shop_item_id = ?
+                """,
+                (self.id,),
+            )
+            cursor.execute(
+                """
+                DELETE FROM shop_items
+                WHERE id = ?
+                """,
+                (self.id,),
+            )
+            connect.commit()
+            cursor.close()
+
     def get_embed(self) -> Embed:
         """"""
 
@@ -521,7 +747,7 @@ class ShopItem(_BaseEntity):
                         accessory=ui.Button(
                             label='Купить', 
                             style=ButtonStyle.green, 
-                            custom_id=f'buy {self.id}',
+                            custom_id=f'item_buy {self.id}',
                             emoji='🛒',
                             disabled= not self.is_active
                         )
@@ -564,7 +790,7 @@ class ShopItem(_BaseEntity):
                 accessory=ui.Button(
                     label='Купить', 
                     style=ButtonStyle.green, 
-                    custom_id=f'buy {self.id}',
+                    custom_id=f'item_buy {self.id}',
                     emoji='🛒',
                     disabled= not self.is_active
                 )
@@ -899,6 +1125,35 @@ class RoleIncome(_BaseEntity):
 
         self.__init__(self.id)
 
+    def delete(self) -> None:
+        """"""
+
+        with _require_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                DELETE FROM role_income_claims
+                WHERE role_income_id = ?
+                """,
+                (self.id,),
+            )
+            cursor.execute(
+                """
+                DELETE FROM role_income_resources
+                WHERE role_income_id = ?
+                """,
+                (self.id,),
+            )
+            cursor.execute(
+                """
+                DELETE FROM role_incomes
+                WHERE id = ?
+                """,
+                (self.id,),
+            )
+            connect.commit()
+            cursor.close()
+
     def get_last_claim_at(self, user_id: int) -> dt.datetime | None:
         """"""
 
@@ -939,9 +1194,9 @@ class RoleIncome(_BaseEntity):
         seconds -= hours * 3600
         minutes = seconds // 60
         seconds -= minutes * 60
-        form_str = str(hours) + ('часов' if hours > 4 else 'часа' if hours > 1 else 'час' if hours else '')
-        form_str += str(minutes) + ('минут' if minutes > 4 else 'минуты' if minutes > 1 else 'минута'  if minutes else '')
-        form_str += str(seconds) + ('секунд' if seconds > 4 else 'секунды' if seconds > 1 else 'секунда' if seconds else '' if form_str else 'Нет')
+        form_str = (str(hours) + ('часов' if hours > 4 else 'часа' if hours > 1 else 'час')) if hours else ''
+        form_str += (str(minutes) + ('минут' if minutes > 4 else 'минуты' if minutes > 1 else 'минута'))  if minutes else ''
+        form_str += (str(seconds) + ('секунд' if seconds > 4 else 'секунды' if seconds > 1 else 'секунда')) if seconds else '' if form_str else 'Нет'
         if moderator_mode:
             return [
                 ui.Container(

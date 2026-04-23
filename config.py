@@ -21,11 +21,14 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.6 Удаление всего лишнего хлама и исправление ошибок' 
+    deps.VERSION = '1.7 Добавление проверок на управление ролями/предметами/правами ' 
     
+    deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
+    deps.rights.row_factory = sql.Row
     deps.main_db = cls.NewConnection('databases2/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row
 
+    deps.Rights = cls.Rights
     deps.Resource = cls.Resource
     deps.Currency = cls.Currency
     deps.ShopItem = cls.ShopItem

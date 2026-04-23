@@ -1,6 +1,6 @@
 from sqlite3 import Connection
 from disnake.ext.commands import Bot
-from disnake import Component, Embed, Intents, Role
+from disnake import Component, Embed, Intents, Member, Role, User
 from typing import List, Tuple
 import datetime as dt
 from disnake.ui import Components, ActionRow
@@ -10,6 +10,26 @@ intents: Intents
 PREFIX: tuple[str]
 TOKEN: str
 VERSION: str
+
+rights: Connection
+"""
+Подключение к SQLite-базе данных `rights.db`.
+
+База данных используется для хранения прав ролей на пользование ботом.
+
+Схема таблиц:
+    `rights`
+        Основная таблица. Формат записи всех полей: f'{Role.id};{Role.id}'...
+        Поля:
+            `manage_items TEXT`
+                Право на управление предметами. Их редактирование, удаление и создание
+            `manage_rincomes TEXT`
+                Право на управление заработком ролей. Их редактирование, удаление и создание
+            `manage_resources TEXT`
+                Право на управление ресурсами. Их редактирование, удаление и создание
+            `administrator TEXT`
+                Все права выше и дополнительно позволяет назначать другие роли на другие права
+"""
 
 main_db: Connection
 """
@@ -198,6 +218,177 @@ main_db: Connection
 
 MAIN_CURRENCY_SYMVOL: str
 MAIN_CURRENCY_ID: int
+
+class Rights:
+    """
+    Объект доступа к таблице `rights` из базы `rights.db`.
+
+    Назначение:
+        Хранит и управляет списками Discord ID ролей для заранее определенных
+        прав доступа бота.
+
+    Поля экземпляра:
+        `manage_items: list[int]`
+            Роли, которым разрешено управлять предметами магазина.
+        `manage_rincomes: list[int]`
+            Роли, которым разрешено управлять доходными ролями.
+        `manage_resources: list[int]`
+            Роли, которым разрешено управлять ресурсами.
+        `administrator: list[int]`
+            Роли с полными административными правами.
+        `fields: tuple[str, ...]`
+            Набор поддерживаемых названий полей.
+
+    Используемая база:
+        `rights.db`
+
+    Используемая таблица:
+        `rights`
+
+    Формат хранения:
+        Каждое поле хранится как строка вида
+        `role_id;role_id;role_id`.
+    """
+    manage_items: list[int]
+    manage_rincomes: list[int]
+    manage_resources: list[int]
+    administrator: list[int]
+    fields: tuple[str, ...]
+
+    def __init__(self) -> None:
+        """
+        Загружает текущие списки ролей из таблицы `rights`.
+
+        Возвращает:
+            `None`
+
+        Исключения:
+            `RuntimeError`
+                Если подключение к `rights.db` не настроено или запись не удалось загрузить.
+        """
+
+    def get(self, field: str) -> list[int]: # type: ignore
+        """
+        Возвращает список ролей для указанного поля прав.
+
+        Параметры:
+            `field: str`
+                Имя поля. Например: `manage_items`.
+
+        Возвращает:
+            `list[int]`
+                Список Discord ID ролей.
+
+        Исключения:
+            `ValueError`
+                Если поле не поддерживается.
+        """
+
+    def add(self, field: str, role_id: int) -> list[int]: # type: ignore
+        """
+        Добавляет роль в выбранное поле прав.
+
+        Параметры:
+            `field: str`
+                Имя поля прав.
+            `role_id: int`
+                Discord ID роли.
+
+        Возвращает:
+            `list[int]`
+                Обновленный список ролей.
+        """
+
+    def remove(self, field: str, role_id: int) -> list[int]: # type: ignore
+        """
+        Удаляет роль из выбранного поля прав.
+
+        Параметры:
+            `field: str`
+                Имя поля прав.
+            `role_id: int`
+                Discord ID роли.
+
+        Возвращает:
+            `list[int]`
+                Обновленный список ролей.
+        """
+
+    def set(self, field: str, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """
+        Полностью заменяет список ролей в выбранном поле прав.
+
+        Параметры:
+            `field: str`
+                Имя поля прав.
+            `role_ids: list[int] | tuple[int, ...]`
+                Новый полный список Discord ID ролей.
+
+        Возвращает:
+            `list[int]`
+                Новый сохраненный список ролей.
+        """
+
+    def get_manage_items(self) -> list[int]: # type: ignore
+        """Возвращает список ролей из поля `manage_items`."""
+
+    def add_manage_items(self, role_id: int) -> list[int]: # type: ignore
+        """Добавляет роль в поле `manage_items`."""
+
+    def remove_manage_items(self, role_id: int) -> list[int]: # type: ignore
+        """Удаляет роль из поля `manage_items`."""
+
+    def set_manage_items(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """Полностью заменяет поле `manage_items`."""
+
+    def get_manage_rincomes(self) -> list[int]: # type: ignore
+        """Возвращает список ролей из поля `manage_rincomes`."""
+
+    def add_manage_rincomes(self, role_id: int) -> list[int]: # type: ignore
+        """Добавляет роль в поле `manage_rincomes`."""
+
+    def remove_manage_rincomes(self, role_id: int) -> list[int]: # type: ignore
+        """Удаляет роль из поля `manage_rincomes`."""
+
+    def set_manage_rincomes(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """Полностью заменяет поле `manage_rincomes`."""
+
+    def get_manage_resources(self) -> list[int]: # type: ignore
+        """Возвращает список ролей из поля `manage_resources`."""
+
+    def add_manage_resources(self, role_id: int) -> list[int]: # type: ignore
+        """Добавляет роль в поле `manage_resources`."""
+
+    def remove_manage_resources(self, role_id: int) -> list[int]: # type: ignore
+        """Удаляет роль из поля `manage_resources`."""
+
+    def set_manage_resources(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """Полностью заменяет поле `manage_resources`."""
+
+    def get_administrator(self) -> list[int]: # type: ignore
+        """Возвращает список ролей из поля `administrator`."""
+
+    def add_administrator(self, role_id: int) -> list[int]: # type: ignore
+        """Добавляет роль в поле `administrator`."""
+
+    def remove_administrator(self, role_id: int) -> list[int]: # type: ignore
+        """Удаляет роль из поля `administrator`."""
+
+    def set_administrator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """Полностью заменяет поле `administrator`."""
+
+    def is_manage_items(self, user: Member | User) -> bool: # type: ignore
+        """Проверяет, имеет ли права user на управление предметами магазина"""
+    
+    def is_manage_rincomes(self, user: Member | User) -> bool: # type: ignore
+        """Проверяет, имеет ли права user на управление ролями для заработка"""
+    
+    def is_manage_resources(self, user: Member | User) -> bool: # type: ignore
+        """Проверяет, имеет ли права user на управление ресурсами"""
+    
+    def is_administrator(self, user: Member | User) -> bool: # type: ignore
+        """Проверяет, имеет ли права user на управление другими ролями"""
+
 
 class Currency:
     """
@@ -473,6 +664,20 @@ class Resource:
             Если все параметры равны `None`, метод ничего не делает.
         """
 
+    def delete(self) -> None:
+        """
+        Полностью удаляет ресурс из базы данных и очищает все связанные записи.
+
+        Возвращает:
+            `None`
+
+        Заметки:
+            Удаляются связанные строки из:
+            - `user_resources`
+            - `role_income_resources`
+            - `resources`
+        """
+
     def __int__(self) -> int: # type: ignore
         """
         Возвращает `amount`, если объект используется как числовое значение.
@@ -696,6 +901,19 @@ class ShopItem:
 
         Заметки:
             Описание автоматически обрезается примерно до 200 символов.
+        """
+
+    def delete(self) -> None:
+        """
+        Полностью удаляет предмет магазина и очищает все связанные записи.
+
+        Возвращает:
+            `None`
+
+        Заметки:
+            Удаляются связанные строки из:
+            - `user_inventory`
+            - `shop_items`
         """
 
     def get_v2component(self, moderator_mode: bool = False) -> list[Components | ActionRow]:
@@ -1082,6 +1300,20 @@ class RoleIncome:
         Заметки:
             Метод использует upsert-логику: запись создается, если ее не было,
             и обновляется, если она уже существует.
+        """
+
+    def delete(self) -> None:
+        """
+        Полностью удаляет доходную роль и очищает все связанные записи.
+
+        Возвращает:
+            `None`
+
+        Заметки:
+            Удаляются связанные строки из:
+            - `role_income_claims`
+            - `role_income_resources`
+            - `role_incomes`
         """
     
     def get_v2component(self, moderator_mode: bool = False) -> list[Component | ActionRow]: # type: ignore
