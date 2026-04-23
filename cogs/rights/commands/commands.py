@@ -73,21 +73,26 @@ class RightsControl(Cog):
     
     @rights.command(name='remove')
     async def rights_remove(self, ctx: Context, option: str, role: Role):
+
         if ctx.author.guild_permissions.administrator or deps.Rights().is_administrator(ctx.author): # type: ignore
+            option = option.lower()
             if option == 'manage_items':
                 deps.Rights().remove_manage_items(role.id) 
-                await ctx.send('Теперь эта роль может управлять настройками предметов игрового магазина')
+                await ctx.send('Эта роль больше не может управлять настройками предметов игрового магазина')
             
             elif option == 'manage_rincomes':
                  deps.Rights().remove_manage_rincomes(role.id)
-                 await ctx.send('Теперь эта роль может настраивать роли для заработка')
+                 await ctx.send('Эта роль больше может настраивать роли для заработка')
 
             elif option == 'administrator':
                 if ctx.author.guild_permissions.administrator: # type: ignore
                     deps.Rights().remove_administrator(role.id)
-                    await ctx.send('Теперь эта роль может управлять всеми правами бота')
+                    await ctx.send('Эта роль больше не может управлять всеми правами бота')
                 else:
                     await ctx.send('У вас нет права удалять администраторов')
+
+            else:
+                await ctx.send('Параметра с таким названием нет! Попробуйте эти: \n ```manage_items manage_rincomes administrator```')
         else:
             await ctx.send('У вас нет прав для выполнения этой команды')
     

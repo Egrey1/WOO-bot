@@ -21,7 +21,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.7 Добавление проверок на управление ролями/предметами/правами ' 
+    deps.VERSION = '1.8 Исправление ошибок в тексте' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
