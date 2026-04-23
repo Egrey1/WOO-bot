@@ -16,12 +16,13 @@ def first_config():
         command_prefix=deps.PREFIX, 
         intents=ds.Intents.all(), 
         sync_commands=True, 
-        allowed_mentions=ds.AllowedMentions.none()
+        allowed_mentions=ds.AllowedMentions.none(),
+        help_command=None
     )
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.8 Исправление ошибок в тексте' 
+    deps.VERSION = '1.9 Добавление команд регулирования предметов, исправление ошибок и обновление !help команды' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row

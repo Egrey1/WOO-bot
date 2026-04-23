@@ -113,14 +113,15 @@ class ItemCommands(Cog):
             
             await interaction.response.send_message(f'Вы успешно приобрели {count} {self.item.name}', ephemeral=True) 
 
-    @command(name='item')
+    @command(name='item', aliases=['items'])
     async def item_command(self, ctx: Context, *, name: str = ''):
         items = [item for item in deps.ShopItem.all() if name.lower() in item.name.lower()]
         rights = deps.Rights()
         moderator_mode = (
                 ctx.author.guild_permissions.administrator or  # type: ignore
                 rights.is_administrator(ctx.author) or  
-                rights.is_manage_items(ctx.author))
+                rights.is_manage_items(ctx.author)
+        )
         components = items[0].get_v2component(moderator_mode) if items else []
 
         if len(items) <= 1:
@@ -149,7 +150,7 @@ class ItemCommands(Cog):
                 title="Выберите предмет",
                 description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id]))
             )
-            if name and moderator_mode:
+            if name and moderator_mode and not any(name == role.name for role in items):
                 view = View()
                 but = Button(
                     label='Создать новый предмет',
@@ -223,10 +224,19 @@ class ItemCommands(Cog):
         
         # Обработка выбора
         selected_item = items[index]
-        await self.original_messages[message.author.id].edit(
-            components=selected_item.get_v2component(moderator_mode), # type: ignore
-            flags=MessageFlags(is_components_v2=True), 
-            embed=None, view=None)
+        try:
+            await self.original_messages[message.author.id].edit(
+                components=selected_item.get_v2component(moderator_mode), # type: ignore
+                flags=MessageFlags(is_components_v2=True), 
+                embed=None, view=None
+            )
+        except:
+            mes = self.original_messages[message.author.id]
+            self.original_messages[message.author.id] = await mes.channel.send(
+                components=selected_item.get_v2component(moderator_mode), # type: ignore
+                flags=MessageFlags(is_components_v2=True)
+            )
+            await mes.delete()
         
         # Очищаем данные
         del self.waiting_users[message.author.id]
