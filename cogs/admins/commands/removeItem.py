@@ -19,7 +19,7 @@ class RemoveItem(Cog):
         )
 
     @command(name='remove-item', aliases=['remove_item', 'item_remove', 'item-remove'])
-    async def remove_item(self, ctx: Context,  member: Member, name: str, count: int):
+    async def remove_item(self, ctx: Context,  member: Member, count: int, *, name: str):
         rights = deps.Rights()
         moderator_mode = (
                 ctx.author.guild_permissions.administrator or  # type: ignore

@@ -19,7 +19,7 @@ class AddItem(Cog):
         )
 
     @command(name='add-item', aliases=['add_item', 'item_add', 'item-add'])
-    async def add_item(self, ctx: Context,  member: Member, name: str, count: int):
+    async def add_item(self, ctx: Context,  member: Member, count: int, *, name: str):
         rights = deps.Rights()
         moderator_mode = (
                 ctx.author.guild_permissions.administrator or  # type: ignore

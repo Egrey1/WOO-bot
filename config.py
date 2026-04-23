@@ -22,7 +22,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '1.9 Добавление команд регулирования предметов, исправление ошибок и обновление !help команды' 
+    deps.VERSION = '1.10 Точно изменил !help. Исправил работу команд с предметами, поменял последние два атрибута местами' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
