@@ -56,12 +56,22 @@ class RolesCommands(Cog):
             
     
     @command('role-income', aliases=['role_income', 'role', 'income'])
-    async def role_income(self, ctx: Context, role: Role | None = None):
+    async def role_income(self, ctx: Context, role: Role | int | None = None):
         rights = deps.Rights()
         moderator_mode = (
                 ctx.author.guild_permissions.administrator or  # type: ignore
                 rights.is_administrator(ctx.author) or  
                 rights.is_manage_rincomes(ctx.author))
+        
+        if isinstance(role, int):
+            role = ctx.guild.get_role(role)
+            if not role:
+                await ctx.send(embed=Embed(
+                    title='Роль не найдена',
+                    description='Убедитесь, что вы указали ID роли',
+                    colour=Colour.red()
+                ))
+                return
         if role:
             roleincome = role.get_role_information()
             if not roleincome:
@@ -80,7 +90,8 @@ class RolesCommands(Cog):
                 else:
                     await ctx.send(embed=Embed(
                         title='Ошибка',
-                        description='Эта роль ни к чему не привязана или у вас нет прав создавать новую роль для заработка'
+                        description='Эта роль ни к чему не привязана или у вас нет прав создавать новую роль для заработка',
+                        colour=Colour.red()
                     ))
 
             await ctx.send(components=roleincome.get_v2component(moderator_mode), flags=MessageFlags(is_components_v2=True)) # type: ignore

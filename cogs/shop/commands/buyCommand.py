@@ -74,7 +74,7 @@ class BuyCommand(Cog):
         if not balance or balance < price:
             return Embed(
                 title='Недостаточно средств!', 
-                description=f'Вам не хватает {price}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}',
+                description='Вам не хватает ' + deps.bamount(price) + ' ' + deps.Currency(deps.MAIN_CURRENCY_ID).symbol, # type: ignore
                 colour=Colour.red())
         
         flag = True

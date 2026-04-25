@@ -1,6 +1,6 @@
 from .commands import *
 
-class TestCog(CollectCommand, BalCommand, VersionCommand, HelpCommand):
+class TestCog(CollectCommand, BalCommand, VersionCommand, HelpCommand, PayCommand, GiveCommand):
     def __init__(self, bot):
         self.bot = bot
 

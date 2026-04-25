@@ -25,7 +25,7 @@ class CollectCommand(Cog):
 
                 if roleincome.currency_id:
                     user_balance[roleincome.currency_id] += roleincome.currency_amount if roleincome.currency_amount else 0
-                    income_balance[role.mention] = roleincome.currency_amount
+                    income_balance[role.mention] = deps.bamount(roleincome.currency_amount)
                     sums += roleincome.currency_amount if roleincome.currency_amount else 0 
                 
                 for resource, amount in roleincome.resources:
@@ -38,7 +38,7 @@ class CollectCommand(Cog):
             embed = Embed(
                 title='Изменение баланса', 
                 description= (
-                    f'Баланс равен {user_balance[deps.MAIN_CURRENCY_ID]}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
+                    f'Баланс равен {deps.bamount(int(user_balance[deps.MAIN_CURRENCY_ID]))}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
                     (f' <- {old} + {sums}\n\n' if sums != 0 else '') + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_balance.items()) + 
                             '\n\n' + 
@@ -50,7 +50,8 @@ class CollectCommand(Cog):
         else:
             embed = Embed(
                 title='Ничего не добавилось!',
-                description=f'Подождите <t:{int(min_last + dt.datetime.now().timestamp())}:R> прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!',
+                # description=f'Подождите <t:{int(min_last + dt.datetime.now().timestamp())}:R> прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!',
+                description=f'Подождите некоторое время прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!',
                 colour= Colour.red()
             )
         await ctx.send(embed=embed)

@@ -18,5 +18,5 @@ class RemoveMoney (Cog):
             return
         
         balance = member.get_balance()
-        balance[deps.MAIN_CURRENCY_ID] += int((amount ** 2) ** 0.5) # type: ignore
+        balance[deps.MAIN_CURRENCY_ID] -= min(int((amount ** 2) ** 0.5), balance[deps.MAIN_CURRENCY_ID].amount) # type: ignore
         await ctx.send('Операция выполнена успешно!')

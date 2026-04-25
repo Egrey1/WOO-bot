@@ -20,8 +20,14 @@ class HelpCommand(Cog):
                 Separator(),
                 TextDisplay('## !add-money, !add-item, !remove-money, !remove-item'),
                 TextDisplay(
-                    'Административные команды для работы с регулированием экономики. Для редактирования денег нужны права manage_rincomes, для редактирования предметов manage_items. \n```!add-money @StarBot 150``` \n ```!add-item @StarBot 200 Мобилизованный пехотинец```'
+                    'Административные команды для работы с регулированием экономики. Для редактирования денег нужны права manage_rincomes, для редактирования предметов manage_items. \n```!add-money @StarBot 150``` ```!add-item @StarBot 200 Мобилизованный пехотинец```'
                 ),
+                Separator(),
+                TextDisplay('## !pay, !give'),
+                TextDisplay(
+                    'Первая команда передает деньги другому участнику, вторая уже предмет \n ```!pay @StarBot 100``` ```!give @StarBot 250 Артиллерийская гаубица```'
+                ),
+                Separator(),
                 Separator(),
                 TextDisplay('-# ' + deps.VERSION)
             )
