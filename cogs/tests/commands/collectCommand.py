@@ -53,7 +53,7 @@ class CollectCommand(Cog):
             embed = Embed(
                 title='Ничего не добавилось!',
                 # description=f'Подождите <t:{int(min_last + dt.datetime.now().timestamp())}:R> прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!',
-                description='Министры недавно отчитались о пополнении казны. Подождите еще некоторое время' if min_last else 'У вас нет ролей для заработка!',
+                description=f'Министры недавно отчитались о пополнении казны. Подождите еще некоторое время <t:{int(min_last + dt.datetime.now().timestamp())}:R>' if min_last else 'У вас нет ролей для заработка!',
                 colour= Colour.red()
             )
         await ctx.send(embed=embed)

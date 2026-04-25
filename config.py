@@ -22,7 +22,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.5 Изменение отображения неудачного сбора денег' 
+    deps.VERSION = '2.6 Возвращение timestamp' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
