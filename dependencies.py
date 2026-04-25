@@ -1624,4 +1624,4 @@ class _UserInventory(dict[int, InventoryItem]):
 
 def bamount(amount):
     amount = str(amount)
-    return ','.join([amount[0 : (len(amount) % 3) + 1]] + [amount[i:i + 3] for i in range(len(amount) % 3, len(amount), 3)])
+    return ','.join([amount[0 : (len(amount) % 3)]] + [amount[i:i + 3] for i in range(len(amount) % 3, len(amount), 3)])

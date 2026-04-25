@@ -743,7 +743,7 @@ class ShopItem(_BaseEntity):
                         )
                     ),
                     ui.Section(
-                        ui.TextDisplay(f'Купить за {self.cost_amount}{self.currency.symbol}'),
+                        ui.TextDisplay('Купить за ' + deps.bamount(self.cost_amount) + self.currency.symbol),
                         accessory=ui.Button(
                             label='Купить', 
                             style=ButtonStyle.green, 
@@ -1241,7 +1241,7 @@ class RoleIncome(_BaseEntity):
                 ui.Separator(),
                 ui.TextDisplay('Кулдаун: ' + form_str),
                 ui.TextDisplay(
-                    f'Заработок: ' + (str(self.currency_amount) + (self.currency.symbol or '')) if self.currency else (self.resources[0][0].name + ' x ' + str(self.resources[0][1]))
+                    f'Заработок: ' + deps.bamount(str(self.currency_amount) + (self.currency.symbol or '')) if self.currency else deps.bamount(self.resources[0][0].name + ' x ' + str(self.resources[0][1]))
                 ),
             )
         ]
