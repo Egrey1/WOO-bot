@@ -64,7 +64,7 @@ class RolesCommands(Cog):
                 rights.is_manage_rincomes(ctx.author))
         
         if isinstance(role, int):
-            role = ctx.guild.get_role(role)
+            role = ctx.guild.get_role(role) # type: ignore
             if not role:
                 await ctx.send(embed=Embed(
                     title='Роль не найдена',
@@ -101,7 +101,7 @@ class RolesCommands(Cog):
     async def on_button_click(self, interaction: MessageInteraction):
         if not interaction.component.custom_id:
             return
-        if 'role' not in interaction.component.custom_id:
+        if  not interaction.component.custom_id.startswith('role'):
             return
         
         custom_id = interaction.component.custom_id.split()

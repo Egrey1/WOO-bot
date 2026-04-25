@@ -250,7 +250,7 @@ class ItemCommands(Cog):
         option = custom_id.split()[0]
         rights = deps.Rights()
 
-        if 'item' not in custom_id:
+        if not custom_id.startswith('item'):
             return
         
         rights = deps.Rights()

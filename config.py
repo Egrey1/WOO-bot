@@ -22,7 +22,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.0 Окончательное завершение бота. Добавлены команды !pay и !give и изменена структура !help команды. Исправление кучи ошибок' 
+    deps.VERSION = '2.5 Изменение отображения неудачного сбора денег' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row

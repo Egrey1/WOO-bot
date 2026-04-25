@@ -33,7 +33,9 @@ class CollectCommand(Cog):
                     income_resource[role.mention] = income_resource.get(role.mention, '') + resource.name + ' ' + str(amount) + '; '
                     resources_sums[resource.id] = resources_sums.get(resource.id, 0) + amount
                 roleincome.set_last_claim_at(ctx.author.id, now)
-        
+        old = deps.bamount(old)
+        sums = deps.bamount(sums)
+
         if income_balance or income_resource:
             embed = Embed(
                 title='Изменение баланса', 
@@ -51,7 +53,7 @@ class CollectCommand(Cog):
             embed = Embed(
                 title='Ничего не добавилось!',
                 # description=f'Подождите <t:{int(min_last + dt.datetime.now().timestamp())}:R> прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!',
-                description=f'Подождите некоторое время прежде чем вы сможете прописать эту команду' if min_last else 'У вас нет ролей для заработка!',
+                description='Министры недавно отчитались о пополнении казны. Подождите еще некоторое время' if min_last else 'У вас нет ролей для заработка!',
                 colour= Colour.red()
             )
         await ctx.send(embed=embed)
