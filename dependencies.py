@@ -1622,6 +1622,47 @@ class _UserInventory(dict[int, InventoryItem]):
                 Полные записи инвентаря пользователя.
         """
 
+def get_all_balances() -> List[_UserBalance]:
+    """
+    Возвращает список балансов всех пользователей, присутствующих в таблице `users`.
+
+    Назначение:
+        Удобно для построения топов, массовой обработки экономики и выборки
+        балансов без необходимости получать каждого пользователя вручную через
+        Discord API.
+
+    Возвращает:
+        `list[_UserBalance]`
+            Список объектов баланса. У каждого объекта доступен `id` пользователя,
+            а работать с ним можно так же, как с результатом `user.get_balance()`.
+
+    Пример:
+        `for balance in deps.get_all_balances():`
+        `    print(balance.id, int(balance[deps.MAIN_CURRENCY_ID]))`
+
+    Исключения:
+        `RuntimeError`
+            Если соединение с `main_db` не настроено.
+        `sqlite3.Error`
+            Возможны ошибки при чтении данных из базы.
+    """
+    if 'main_db' not in globals() or main_db is None:
+        raise RuntimeError('База данных не инициализирована')
+
+    with main_db as connect:
+        cursor = connect.cursor()
+        cursor.execute(
+            """
+            SELECT user_id
+            FROM user_balances
+            ORDER BY amount DESC
+            """
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+
+    return [_UserBalance(row['user_id']) for row in rows]
+
 def bamount(amount):
     amount = str(amount)
-    return ','.join([amount[0 : (len(amount) % 3)]] + [amount[i:i + 3] for i in range(len(amount) % 3, len(amount), 3)])
+    return (','.join([amount[0 : (len(amount) % 3)]] + [amount[i:i + 3] for i in range(len(amount) % 3, len(amount), 3)])).strip(',')
