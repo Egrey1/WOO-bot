@@ -9,5 +9,5 @@ async def on_ready():
     await config.second_config()
 
 if __name__ == "__main__":
-    # deps.bot.run(deps.TOKEN)
-    print(deps.bamount(1234567890))
+    deps.bot.run(deps.TOKEN)
+    # print(deps.bamount(1234567890))

@@ -5,7 +5,7 @@ class BuyCommand(Cog):
     count: dict[int, int] = {}
 
     @command(name='buy')
-    async def buy(self, ctx: Context, item_name: str, count: int = 1):
+    async def buy(self, ctx: Context, count: int, *, item_name: str):
         self.items[ctx.author.id] = []
 
         if count < 1:
@@ -47,8 +47,8 @@ class BuyCommand(Cog):
     async def buy_slash(
         self, 
         interaction: CommandInteraction, 
-        item: str = Param(name='предмет', description='Название предмета'), # type: ignore
-        count: int = Param(1, name='количество', description='количетво покупаемых предметов')
+        count: int = Param(1, name='количество', description='количетво покупаемых предметов'),
+        item: str = Param(name='предмет', description='Название предмета')
         ):
         try:
             item_name = item.strip() # type: ignore
@@ -85,7 +85,7 @@ class BuyCommand(Cog):
         if flag and required_role_id is not None:
             return Embed(
                 title='У вас нет нужной роли!',
-                description=f'Для покупки вам необходима роль <&{required_role_id}>', 
+                description=f'Для покупки вам необходима роль <@&{required_role_id}>', 
                 colour=Colour.red())
         
         author_inventory = author.get_inventory()

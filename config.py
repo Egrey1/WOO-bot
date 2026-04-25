@@ -22,7 +22,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.7 Исправлена критическая ошибка с отображением баланса' 
+    deps.VERSION = '2.8 Исправление команды !buy' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
