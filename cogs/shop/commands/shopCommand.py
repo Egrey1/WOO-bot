@@ -18,7 +18,7 @@ class ShopCommand(Cog):
             if total < 10:
                 embed.add_field(
                     name=(
-                        params[0] + ' ' + deps.bamount(item.cost_amount) +
+                        params[0] + ' — ' + deps.bamount(item.cost_amount) +
                         (deps.Currency(item.cost_currency_id).symbol or '')
                     ), 
                     value=params[1],
@@ -60,7 +60,7 @@ class ShopCommand(Cog):
         for item in self.normal_shop[author_id][
             (self.current_page[author_id] * 10):((self.current_page[author_id] + 1) * 10)]:
             embed.add_field(
-                name= item.get_embed_field_params()[0] + ' ' +
+                name= item.get_embed_field_params()[0] + ' — ' +
                 deps.bamount(item.cost_amount) + 
                 (deps.Currency(item.cost_currency_id).symbol or ''),
                 value=item.get_embed_field_params()[1],
@@ -100,7 +100,7 @@ class ShopCommand(Cog):
         for item in self.normal_shop[author_id][
             (self.current_page[author_id] * 10):((self.current_page[author_id] + 1) * 10)]:
             embed.add_field(
-                name= item.get_embed_field_params()[0] + ' ' +
+                name= item.get_embed_field_params()[0] + ' — ' +
                 deps.bamount(item.cost_amount) + 
                 (deps.Currency(item.cost_currency_id).symbol or ''),
                 value=item.get_embed_field_params()[1],

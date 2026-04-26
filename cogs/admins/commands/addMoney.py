@@ -3,7 +3,10 @@ from ..library import Cog, command, Context, deps, Member, Embed, Colour
 class AddMoney(Cog):
     
     @command('add-money', aliases=['add_money', 'money_add', 'item-money'])
-    async def add_money(self, ctx: Context, member: Member, amount: int):
+    async def add_money(self, ctx: Context, member: Member, amount: str):
+        amount = amount.replace(',', '')
+        amount = amount.split('e')
+        amount = int(amount[0]) * (10 ** ((int(amount[1]) or 0) if len(amount) >= 2 else 0))
         rights = deps.Rights()
         moderator_mode = (
                 ctx.author.guild_permissions.administrator or  # type: ignore

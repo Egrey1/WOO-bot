@@ -13,7 +13,10 @@ class GiveCommand(Cog):
             color=Colour.red()
         )
         
-    async def give(self, interaction: MessageInteraction, member1: Member, member2: Member, amount: int, item: deps.ShopItem):
+    async def give(self, interaction: MessageInteraction, member1: Member, member2: Member, amount: str, item: deps.ShopItem):
+        amount = amount.replace(',', '')
+        amount = amount.split('e')
+        amount = int(amount[0]) * (10 ** ((int(amount[1]) or 0) if len(amount) >= 2 else 0))
         if interaction.user.id != member1.id:
             await interaction.response.send_message('Это не ваше интерактивное окно', ephemeral=True)
             return

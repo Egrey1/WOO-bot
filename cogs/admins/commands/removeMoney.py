@@ -3,7 +3,10 @@ from ..library import Cog, command, Context, deps, Member, Embed, Colour
 class RemoveMoney (Cog):
     
     @command('remove-money', aliases=['remove_money', 'money_remove', 'money-remove'])
-    async def remove_money(self, ctx: Context, member: Member, amount: int):
+    async def remove_money(self, ctx: Context, member: Member, amount: str):
+        amount = amount.replace(',', '')
+        amount = amount.split('e')
+        amount = int(amount[0]) * (10 ** ((int(amount[1]) or 0) if len(amount) >= 2 else 0))
         rights = deps.Rights()
         moderator_mode = (
                 ctx.author.guild_permissions.administrator or  # type: ignore

@@ -20,7 +20,7 @@ class CollectCommand(Cog):
                 last_claim: dt.datetime = roleincome.get_last_claim_at(ctx.author.id)
                 now = dt.datetime.now()
                 if (last_claim is not None) and (now - last_claim).total_seconds() < roleincome.cooldown_seconds:
-                    min_last = min(min_last, (now - last_claim).total_seconds()) if min_last != 0 else (now - last_claim).total_seconds()
+                    min_last = min(min_last, roleincome.cooldown_seconds - (now - last_claim).total_seconds()) if min_last != 0 else roleincome.cooldown_seconds - (now - last_claim).total_seconds()
                     continue
 
                 if roleincome.currency_id:

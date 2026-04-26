@@ -5,7 +5,10 @@ class BuyCommand(Cog):
     count: dict[int, int] = {}
 
     @command(name='buy')
-    async def buy(self, ctx: Context, count: int, *, item_name: str):
+    async def buy(self, ctx: Context, count: str, *, item_name: str):
+        count = count.replace(',', '')
+        count = counnt.split('e')
+        count = int(count[0]) * (10 ** ((int(count[1]) or 0) if len(count) >= 2 else 0))
         self.items[ctx.author.id] = []
 
         if count < 1:

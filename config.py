@@ -22,7 +22,7 @@ def first_config():
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.9 Создание команды !top, обновления интерфейса !collect' 
+    deps.VERSION = '2.10 Исправление timestamp в команде !collect, изменение интерфейса в !shop, добавлениие пагинации в !top с улучшением визуала' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
