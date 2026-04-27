@@ -12,6 +12,21 @@ class CollectCommand(Cog):
         user_balance = ctx.author.get_balance()
         old = user_balance[deps.MAIN_CURRENCY_ID]
         user_resources = ctx.author.get_resources()
+        percentage_income = 1
+        percentage_balance_after = 1
+        percentage_balance_before = 1
+
+        for role in ctx.author.roles: # type: ignore
+            roleincome = role.get_role_information()
+            if roleincome:
+                if 'percentageI' in roleincome.tags:
+                    percentage_income += (roleincome.currency_amount or 0) / 100
+                if 'percentageBafter' in roleincome.tags:
+                    percentage_balance_after += (roleincome.currency_amount or 0) / 100
+                if 'percentageBbefore' in roleincome.tags:
+                    percentage_balance_before += (roleincome.currency_amount or 0) / 100
+        user_balance[deps.MAIN_CURRENCY_ID] = int((user_balance[deps.MAIN_CURRENCY_ID].amount or 0) * percentage_balance_before)
+
 
         for role in ctx.author.roles: # type: ignore
             roleincome = role.get_role_information()
@@ -23,10 +38,13 @@ class CollectCommand(Cog):
                     min_last = min(min_last, roleincome.cooldown_seconds - (now - last_claim).total_seconds()) if min_last != 0 else roleincome.cooldown_seconds - (now - last_claim).total_seconds()
                     continue
 
+                if any('percentage' in tag for tag in roleincome.tags):
+                    continue
+
                 if roleincome.currency_id:
-                    user_balance[roleincome.currency_id] += roleincome.currency_amount if roleincome.currency_amount else 0
-                    income_balance[role.mention] = deps.bamount(roleincome.currency_amount)
-                    sums += roleincome.currency_amount if roleincome.currency_amount else 0 
+                    user_balance[roleincome.currency_id] += (roleincome.currency_amount or 0) * percentage_income
+                    income_balance[role.mention] = deps.bamount(roleincome.currency_amount) + ' - ' + deps.bamount(percentage_income * 100) + '% -> ' + deps.bamount(roleincome.currency_amount * percentage_income) # type: ignore
+                    sums += (roleincome.currency_amount or 0) * percentage_income
                 
                 for resource, amount in roleincome.resources:
                     user_resources[resource.id] += amount
@@ -40,7 +58,7 @@ class CollectCommand(Cog):
             embed = Embed(
                 title='Изменение баланса', 
                 description= (
-                    f'Баланс равен {deps.bamount(int(user_balance[deps.MAIN_CURRENCY_ID]))}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
+                    f'Баланс равен {deps.bamount(user_balance[deps.MAIN_CURRENCY_ID].amount or 0)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
                     (f' <- {old} + {sums}\n\n' if sums != 0 else '') + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_balance.items()) + 
                             '\n\n' + 

@@ -5,7 +5,7 @@ class AddMoney(Cog):
     @command('add-money', aliases=['add_money', 'money_add', 'item-money'])
     async def add_money(self, ctx: Context, member: Member, amount: str):
         amount = amount.replace(',', '')
-        amount = amount.split('e')
+        amount = amount.split('e') # type: ignore
         amount = int(amount[0]) * (10 ** ((int(amount[1]) or 0) if len(amount) >= 2 else 0))
         rights = deps.Rights()
         moderator_mode = (

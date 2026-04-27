@@ -7,11 +7,11 @@ class BuyCommand(Cog):
     @command(name='buy')
     async def buy(self, ctx: Context, count: str, *, item_name: str):
         count = count.replace(',', '')
-        count = counnt.split('e')
+        count = count.split('e') # type: ignore
         count = int(count[0]) * (10 ** ((int(count[1]) or 0) if len(count) >= 2 else 0))
         self.items[ctx.author.id] = []
 
-        if count < 1:
+        if count < 1: # type: ignore
             embed = Embed(
                 title='Неверные данные!',
                 description='Вы ввели неверное количество покупаемых предметов!',
@@ -25,7 +25,7 @@ class BuyCommand(Cog):
                 self.items[ctx.author.id] += [item]
 
         if len(self.items[ctx.author.id]) == 1:
-            embed = self._buy_process(ctx.author, self.items[ctx.author.id][0], count)
+            embed = self._buy_process(ctx.author, self.items[ctx.author.id][0], count) # type: ignore
         elif len(self.items[ctx.author.id]) == 0:
             embed = Embed(
                 title='Не найдено!',
@@ -42,7 +42,7 @@ class BuyCommand(Cog):
                 description=form_s,
                 colour= Colour.greyple() 
             )
-            self.count[ctx.author.id] = count
+            self.count[ctx.author.id] = count # type: ignore
         
         await ctx.send(embed=embed, allowed_mentions=AllowedMentions.none())
 
@@ -99,7 +99,7 @@ class BuyCommand(Cog):
         author.get_balance()[deps.MAIN_CURRENCY_ID] -= item.cost_amount * count
         return Embed(
             title='Успешно куплено!',
-            description= f'Вы успешно купили `{item.name}` в количестве `{count}` штук за `{item.cost_amount * count}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}`',
+            description= f'Вы успешно купили \'{item.name}\' в количестве `{deps.bamount(count)}` штук за `{item.cost_amount * count}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}`',
             colour=Colour.green()) 
     
     @Cog.listener()

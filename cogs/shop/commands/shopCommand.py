@@ -33,7 +33,7 @@ class ShopCommand(Cog):
             return
         
         if total > 10:
-            view = View()
+            view = View(timeout=None)
             prev_page = Button(emoji='⏮️', disabled=True)
             next_page = Button(emoji='⏭️')
 

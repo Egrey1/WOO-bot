@@ -1,4 +1,3 @@
-import logging
 import dependencies as deps
 import config
 

@@ -20,7 +20,7 @@ class InvCommand(Cog):
                 if total_count < 10:
                     shop_item = deps.ShopItem(item.shop_item_id)
                     embed.add_field(
-                        name=(shop_item.get_embed_field_params()[0]) + ' ' + deps.bamount(item.amount),
+                        name=(shop_item.get_embed_field_params()[0]) + ' | ' + deps.bamount(item.amount),
                         value=shop_item.get_embed_field_params()[1],
                         inline=False
                     )
@@ -64,7 +64,7 @@ class InvCommand(Cog):
             (self.current_page[author_id] * 10):((self.current_page[author_id] + 1) * 10)]:
             shop_item = deps.ShopItem(item.shop_item_id)
             embed.add_field(
-                name= shop_item.get_embed_field_params()[0] + deps.bamount(item.amount), 
+                name= shop_item.get_embed_field_params()[0] + ' | ' + deps.bamount(item.amount), 
                 value=shop_item.get_embed_field_params()[1],
                 inline=False
             )
@@ -102,7 +102,7 @@ class InvCommand(Cog):
             (self.current_page[author_id] * 10):((self.current_page[author_id] + 1) * 10)]:
             shop_item = deps.ShopItem(item.shop_item_id)
             embed.add_field(
-                name= shop_item.get_embed_field_params()[0] + deps.bamount(item.amount),
+                name= shop_item.get_embed_field_params()[0] + ' | ' + deps.bamount(item.amount),
                 value=shop_item.get_embed_field_params()[1],
                 inline=False
             )

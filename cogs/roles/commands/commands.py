@@ -10,17 +10,22 @@ class RolesCommands(Cog):
                 option_name: str,
                 lists: list[ActionRow],
                 cooldown: bool = False, 
-                income: bool = False
+                income: bool = False,
+                add_tag: bool = False,
+                remove_tag: bool = False
         ):
             self.roleincome = roleincome
             self.cooldown = cooldown
             self.income = income
             self.lists = lists
+            self.add_tag = add_tag
+            self.remove_tag = remove_tag
 
             self.option = TextInput(
                 label=option_name,
                 placeholder=('1s; 2m; 3h - одна секунда, две минуты, три часа' if cooldown else None),
-                custom_id='role_edit'
+                custom_id='role_edit',
+                max_length=20 if (add_tag or remove_tag) else None
             )
             super().__init__(title=f'Редактирование {option_name}', components=[self.option])
         
@@ -41,10 +46,28 @@ class RolesCommands(Cog):
                     self.roleincome.edit(cooldown_seconds=int(value[:-1]) * 3600)
             
             elif self.income:
-                if not value.isdigit():
-                    await interaction.response.send_message('Ожидалось число!', ephemeral=True)
+                if (not value.isdigit()) and ((value[-1] != '%') and (not value[:-1].isdigit())):
+                    await interaction.response.send_message('Ожидалось число или процент!', ephemeral=True)
                     return
-                self.roleincome.edit(currency_amount=int(value))
+                if value[-1] != '%':
+                    self.roleincome.edit(currency_amount=int(value))
+                    self.roleincome.remove_tag('percentageI')
+                else:
+                    self.roleincome.edit(currency_amount=int(value[:-1]))
+                    self.roleincome.add_tag('percentageI')
+            
+            elif self.add_tag:
+                value = value.replace(';', ',')
+                if value in self.roleincome.tags:
+                    await interaction.response.send_message('Этот тег уже присутствует', ephemeral=True)
+                    return
+                self.roleincome.add_tag(value)
+            
+            elif self.remove_tag:
+                if value not in self.roleincome.tags:
+                    await interaction.response.send_message('Этого тега и так не было в заработной роли', ephemeral=True)
+                    return
+                self.roleincome.remove_tag(value)
 
             components = self.roleincome.get_v2component(True) + self.lists
             await interaction.response.defer(with_message=False)
@@ -53,7 +76,7 @@ class RolesCommands(Cog):
                 flags=MessageFlags(is_components_v2=True)) 
 
 
-            
+    
     
     @command('role-income', aliases=['role_income', 'role', 'income'])
     async def role_income(self, ctx: Context, role: Role | int | None = None):
@@ -146,6 +169,14 @@ class RolesCommands(Cog):
 
             elif 'income' in option:
                 modal = self.EditRolesModal(roleincome, 'Заработок', [] if not (roleincome.id in self.creates) else components, income=True)
+                await interaction.response.send_modal(modal)
+            
+            elif 'add_tag' in option:
+                modal = self.EditRolesModal(roleincome, 'Добавить тег', [] if not (roleincome.id in self.creates) else components, add_tag=True)
+                await interaction.response.send_modal(modal)
+            
+            elif 'remove_tag' in option:
+                modal = self.EditRolesModal(roleincome, 'Удалить тег', [] if not (roleincome.id in self.creates) else components, remove_tag=True)
                 await interaction.response.send_modal(modal)
             
 

@@ -34,6 +34,187 @@ def _normalize_role_id(role: Role | int | None) -> int | None:
     return role if role != -1 else None
 
 
+def _parse_tags(raw_value: str | None) -> list[str]:
+    if not raw_value:
+        return []
+    return [tag for tag in raw_value.split(';') if tag]
+
+
+def _serialize_tags(tags: list[str] | tuple[str, ...]) -> str:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_tag in tags:
+        tag = str(raw_tag).strip()
+        if not tag or tag in seen:
+            continue
+        normalized.append(tag)
+        seen.add(tag)
+    return ';'.join(normalized)
+
+
+def _normalize_number(value: int | float) -> int | float:
+    normalized = float(value)
+    return int(normalized) if normalized.is_integer() else normalized
+
+
+def _truncate_number(value: int | float) -> int:
+    return int(float(value))
+
+
+def _format_number(value: int | float | None) -> str:
+    if value is None:
+        return '0'
+    return str(_normalize_number(value))
+
+
+def migrate_main_db() -> None:
+    connection = _require_connection()
+    _enable_foreign_keys(connection)
+    _migrate_role_incomes_table(connection)
+    _migrate_user_balances_table(connection)
+
+
+def _enable_foreign_keys(connection: sql_Connection) -> None:
+    cursor = connection.cursor()
+    cursor.execute('PRAGMA foreign_keys = ON')
+    cursor.close()
+
+
+def _migrate_role_incomes_table(connection: sql_Connection) -> None:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'role_incomes'
+        """
+    )
+    row = cursor.fetchone()
+    cursor.close()
+
+    if row is None:
+        return
+
+    create_sql = str(row['sql'] or '').replace('"', '').replace(' ', '').lower()
+    if 'currency_amount' not in create_sql or '>=0' not in create_sql:
+        return
+
+    cursor = connection.cursor()
+    cursor.execute('PRAGMA foreign_keys = OFF')
+    cursor.execute(
+        """
+        CREATE TABLE role_incomes__new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role_id INTEGER NOT NULL UNIQUE,
+            cooldown_seconds INTEGER NOT NULL CHECK (cooldown_seconds > 0),
+            currency_id INTEGER,
+            currency_amount REAL,
+            is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+            tags TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (currency_id) REFERENCES currencies(id) ON DELETE SET NULL
+        )
+        """
+    )
+
+    cursor.execute("PRAGMA table_info(role_incomes)")
+    existing_columns = {str(column['name']) for column in cursor.fetchall()}
+    tags_select = "COALESCE(tags, '')" if 'tags' in existing_columns else "''"
+
+    cursor.execute(
+        f"""
+        INSERT INTO role_incomes__new (
+            id,
+            role_id,
+            cooldown_seconds,
+            currency_id,
+            currency_amount,
+            is_active,
+            tags,
+            created_at,
+            updated_at
+        )
+        SELECT
+            id,
+            role_id,
+            cooldown_seconds,
+            currency_id,
+            currency_amount,
+            is_active,
+            {tags_select},
+            created_at,
+            updated_at
+        FROM role_incomes
+        """
+    )
+    cursor.execute("DROP TABLE role_incomes")
+    cursor.execute("ALTER TABLE role_incomes__new RENAME TO role_incomes")
+    cursor.execute('PRAGMA foreign_keys = ON')
+    connection.commit()
+    cursor.close()
+
+
+def _migrate_user_balances_table(connection: sql_Connection) -> None:
+    cursor = connection.cursor()
+    cursor.execute(
+        """
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'user_balances'
+        """
+    )
+    row = cursor.fetchone()
+    cursor.close()
+
+    if row is None:
+        return
+
+    create_sql = str(row['sql'] or '').replace('"', '').replace(' ', '').lower()
+    if 'amountintegernotnulldefault0check(amount>=0)' not in create_sql:
+        return
+
+    cursor = connection.cursor()
+    cursor.execute('PRAGMA foreign_keys = OFF')
+    cursor.execute(
+        """
+        CREATE TABLE user_balances__new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            currency_id INTEGER NOT NULL,
+            amount INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (currency_id) REFERENCES currencies(id) ON DELETE CASCADE,
+            UNIQUE (user_id, currency_id)
+        )
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO user_balances__new (
+            id,
+            user_id,
+            currency_id,
+            amount,
+            updated_at
+        )
+        SELECT
+            id,
+            user_id,
+            currency_id,
+            amount,
+            updated_at
+        FROM user_balances
+        """
+    )
+    cursor.execute("DROP TABLE user_balances")
+    cursor.execute("ALTER TABLE user_balances__new RENAME TO user_balances")
+    cursor.execute('PRAGMA foreign_keys = ON')
+    connection.commit()
+    cursor.close()
+
+
 class _BaseEntity:
     table_name: str = ''
 
@@ -247,24 +428,27 @@ class Currency(_BaseEntity):
         self.is_main = bool(row['is_main'])
         self.created_at = str(row['created_at'])
         self.updated_at = str(row['updated_at'])
-        self.amount: int | None = None
+        self.amount: int | float | None = None
 
     def __int__(self) -> int:
-        return 0 if self.amount is None else int(self.amount)
+        return 0 if self.amount is None else int(float(self.amount))
+
+    def __float__(self) -> float:
+        return 0.0 if self.amount is None else float(self.amount)
 
     def __str__(self) -> str:
-        return str(self.amount) if self.amount is not None else self.name
+        return _format_number(self.amount) if self.amount is not None else self.name
 
-    def _with_amount(self, amount: int) -> 'Currency':
+    def _with_amount(self, amount: int | float) -> 'Currency':
         currency = Currency(self.id)
-        currency.amount = amount
+        currency.amount = _normalize_number(amount)
         return currency
 
-    def __iadd__(self, value: int) -> 'Currency':
-        return self._with_amount(int(self) + int(value))
+    def __iadd__(self, value: int | float) -> 'Currency':
+        return self._with_amount(_truncate_number(float(self) + float(value)))
 
-    def __isub__(self, value: int) -> 'Currency':
-        return self._with_amount(int(self) - int(value))
+    def __isub__(self, value: int | float) -> 'Currency':
+        return self._with_amount(_truncate_number(float(self) - float(value)))
 
     @classmethod
     def all(cls) -> list['Currency']:
@@ -542,6 +726,7 @@ class ShopItem(_BaseEntity):
         self.is_active = bool(row['is_active'])
         self.created_at = str(row['created_at'])
         self.updated_at = str(row['updated_at'])
+        self.tags = _parse_tags(row['tags'])
         self.currency = Currency(self.cost_currency_id)
         self.buy_mode = False
 
@@ -570,11 +755,13 @@ class ShopItem(_BaseEntity):
         currency: str | int,
         stock: int | None = None,
         is_active: bool = True,
+        tags: list[str] | tuple[str, ...] | None = None,
     ) -> 'ShopItem':
         """"""
 
         currency_id = currency.id if isinstance(currency, Currency) else int(currency)
         role_id = _normalize_role_id(required_role)
+        serialized_tags = _serialize_tags(tags or [])
 
         with _require_connection() as connect:
             cursor = connect.cursor()
@@ -587,11 +774,12 @@ class ShopItem(_BaseEntity):
                     cost_currency_id,
                     required_role_id,
                     stock,
-                    is_active
+                    is_active,
+                    tags
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (name, description, cost, currency_id, role_id, stock, int(is_active)),
+                (name, description, cost, currency_id, role_id, stock, int(is_active), serialized_tags),
             )
             created_id = cursor.lastrowid
             connect.commit()
@@ -607,6 +795,7 @@ class ShopItem(_BaseEntity):
         currency: str | int | None = None,
         stock: int | None = None,
         is_active: bool | None = None,
+        tags: list[str] | tuple[str, ...] | None = None,
     ) -> None:
         """"""
 
@@ -635,6 +824,9 @@ class ShopItem(_BaseEntity):
         if is_active is not None:
             updates.append('is_active = ?')
             params.append(int(is_active))
+        if tags is not None:
+            updates.append('tags = ?')
+            params.append(_serialize_tags(tags))
 
         if not updates:
             return
@@ -656,6 +848,23 @@ class ShopItem(_BaseEntity):
             cursor.close()
 
         self.__init__(self.id)
+
+    def set_tags(self, tags: list[str] | tuple[str, ...]) -> list[str]:
+        self.edit(tags=tags)
+        return list(self.tags)
+
+    def add_tag(self, tag: str) -> list[str]:
+        updated_tags = list(self.tags)
+        normalized_tag = str(tag).strip()
+        if normalized_tag and normalized_tag not in updated_tags:
+            updated_tags.append(normalized_tag)
+            self.edit(tags=updated_tags)
+        return list(self.tags)
+
+    def remove_tag(self, tag: str) -> list[str]:
+        normalized_tag = str(tag).strip()
+        self.edit(tags=[saved_tag for saved_tag in self.tags if saved_tag != normalized_tag])
+        return list(self.tags)
 
     def delete(self) -> None:
         """"""
@@ -710,7 +919,7 @@ class ShopItem(_BaseEntity):
                         accessory=ui.Button(
                             label='Купить', 
                             style=ButtonStyle.green, 
-                            custom_id=f'buy {self.id}',
+                            custom_id=f'item_buy {self.id}',
                             emoji='🛒',
                             disabled= not self.is_active
                         )
@@ -836,11 +1045,11 @@ class InventoryItem(_BaseEntity):
         entry.amount = amount
         return entry
 
-    def __iadd__(self, value: int) -> 'InventoryItem':
-        return self._with_amount(self.amount + int(value))
+    def __iadd__(self, value: int | float) -> 'InventoryItem':
+        return self._with_amount(self.amount + _truncate_number(value))
 
-    def __isub__(self, value: int) -> 'InventoryItem':
-        return self._with_amount(self.amount - int(value))
+    def __isub__(self, value: int | float) -> 'InventoryItem':
+        return self._with_amount(self.amount - _truncate_number(value))
 
     @classmethod
     def all_for_user(cls, user_id: int | str) -> list['InventoryItem']:
@@ -862,11 +1071,12 @@ class InventoryItem(_BaseEntity):
         cls,
         user_id: int,
         shop_item: ShopItem | int,
-        amount: int = 1,
+        amount: int | float = 1,
     ) -> 'InventoryItem':
         """"""
 
-        if amount < 0:
+        normalized_amount = _truncate_number(amount)
+        if normalized_amount < 0:
             raise ValueError('Количество предметов не может быть отрицательным')
 
         shop_item_id = shop_item.id if isinstance(shop_item, ShopItem) else int(shop_item)
@@ -881,18 +1091,19 @@ class InventoryItem(_BaseEntity):
                     amount = excluded.amount,
                     updated_at = CURRENT_TIMESTAMP
                 """,
-                (user_id, shop_item_id, amount),
+                (user_id, shop_item_id, normalized_amount),
             )
             connect.commit()
             cursor.close()
         return cls(user_id, shop_item_id)
 
-    def edit(self, amount: int) -> None:
+    def edit(self, amount: int | float) -> None:
         """"""
 
-        if amount < 0:
+        normalized_amount = _truncate_number(amount)
+        if normalized_amount < 0:
             raise ValueError('Количество предметов не может быть отрицательным')
-        if amount == 0:
+        if normalized_amount == 0:
             self.delete()
             return
 
@@ -905,7 +1116,7 @@ class InventoryItem(_BaseEntity):
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ? AND shop_item_id = ?
                 """,
-                (amount, self.user_id, self.shop_item_id),
+                (normalized_amount, self.user_id, self.shop_item_id),
             )
             connect.commit()
             cursor.close()
@@ -949,10 +1160,11 @@ class RoleIncome(_BaseEntity):
         self.role_id = int(row['role_id'])
         self.cooldown_seconds = int(row['cooldown_seconds'])
         self.currency_id = row['currency_id']
-        self.currency_amount = row['currency_amount']
+        self.currency_amount = _normalize_number(row['currency_amount']) if row['currency_amount'] is not None else None
         self.is_active = bool(row['is_active'])
         self.created_at = str(row['created_at'])
         self.updated_at = str(row['updated_at'])
+        self.tags = _parse_tags(row['tags'])
         self.currency = Currency(self.currency_id) if self.currency_id is not None else None
         self.resources = self._load_resources()
 
@@ -993,9 +1205,10 @@ class RoleIncome(_BaseEntity):
         role: Role | int,
         cooldown_seconds: int,
         currency: Currency | int | None = None,
-        currency_amount: int | None = None,
+        currency_amount: int | float | None = None,
         resources: list[tuple[int | str, int]] | None = None,
         is_active: bool = True,
+        tags: list[str] | tuple[str, ...] | None = None,
     ) -> 'RoleIncome':
         """"""
 
@@ -1010,6 +1223,7 @@ class RoleIncome(_BaseEntity):
         currency_id = None
         if currency is not None:
             currency_id = currency.id if isinstance(currency, Currency) else int(currency)
+        serialized_tags = _serialize_tags(tags or [])
 
         with _require_connection() as connect:
             cursor = connect.cursor()
@@ -1020,11 +1234,12 @@ class RoleIncome(_BaseEntity):
                     cooldown_seconds,
                     currency_id,
                     currency_amount,
-                    is_active
+                    is_active,
+                    tags
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (role_id, cooldown_seconds, currency_id, currency_amount, int(is_active)),
+                (role_id, cooldown_seconds, currency_id, _normalize_number(currency_amount) if currency_amount is not None else None, int(is_active), serialized_tags),
             )
             created_id = cursor.lastrowid
 
@@ -1061,9 +1276,10 @@ class RoleIncome(_BaseEntity):
         self,
         cooldown_seconds: int | None = None,
         currency: Currency | int | None = None,
-        currency_amount: int | None = None,
+        currency_amount: int | float | None = None,
         resources: list[tuple[int | str, int]] | None = None,
         is_active: bool | None = None,
+        tags: list[str] | tuple[str, ...] | None = None,
     ) -> None:
         """"""
 
@@ -1081,10 +1297,13 @@ class RoleIncome(_BaseEntity):
             params.append(currency_id)
         if currency_amount is not None:
             updates.append('currency_amount = ?')
-            params.append(currency_amount)
+            params.append(_normalize_number(currency_amount))
         if is_active is not None:
             updates.append('is_active = ?')
             params.append(int(is_active))
+        if tags is not None:
+            updates.append('tags = ?')
+            params.append(_serialize_tags(tags))
 
         with _require_connection() as connect:
             cursor = connect.cursor()
@@ -1124,6 +1343,23 @@ class RoleIncome(_BaseEntity):
             cursor.close()
 
         self.__init__(self.id)
+
+    def set_tags(self, tags: list[str] | tuple[str, ...]) -> list[str]:
+        self.edit(tags=tags)
+        return list(self.tags)
+
+    def add_tag(self, tag: str) -> list[str]:
+        updated_tags = list(self.tags)
+        normalized_tag = str(tag).strip()
+        if normalized_tag and normalized_tag not in updated_tags:
+            updated_tags.append(normalized_tag)
+            self.edit(tags=updated_tags)
+        return list(self.tags)
+
+    def remove_tag(self, tag: str) -> list[str]:
+        normalized_tag = str(tag).strip()
+        self.edit(tags=[saved_tag for saved_tag in self.tags if saved_tag != normalized_tag])
+        return list(self.tags)
 
     def delete(self) -> None:
         """"""
@@ -1194,9 +1430,18 @@ class RoleIncome(_BaseEntity):
         seconds -= hours * 3600
         minutes = seconds // 60
         seconds -= minutes * 60
-        form_str = (str(hours) + ('часов' if hours > 4 else 'часа' if hours > 1 else 'час')) if hours else ''
-        form_str += (str(minutes) + ('минут' if minutes > 4 else 'минуты' if minutes > 1 else 'минута'))  if minutes else ''
-        form_str += (str(seconds) + ('секунд' if seconds > 4 else 'секунды' if seconds > 1 else 'секунда')) if seconds else '' if form_str else 'Нет'
+        form_str = (str(hours) + (' часов ' if hours > 4 else ' часа ' if hours > 1 else ' час ')) if hours else ''
+        form_str += (str(minutes) + (' минут ' if minutes > 4 else ' минуты ' if minutes > 1 else ' минута '))  if minutes else ''
+        form_str += (str(seconds) + (' секунд ' if seconds > 4 else ' секунды ' if seconds > 1 else ' секунда ')) if seconds else '' if form_str else 'Нет'
+        if self.currency:
+            salary = deps.bamount(_format_number(self.currency_amount) )
+            if not any( 'percentage' in tag for tag in self.tags):
+                salary += self.currency.symbol or ''
+            else: 
+                salary += '%'
+                    
+        else:
+            salary = (self.resources[0][0].name + ' x ' + str(self.resources[0][1]))
         if moderator_mode:
             return [
                 ui.Container(
@@ -1215,7 +1460,7 @@ class RoleIncome(_BaseEntity):
                     ),
                     ui.Section(
                         ui.TextDisplay(
-                            f'Заработок: ' + (str(self.currency_amount) + (self.currency.symbol or '')) if self.currency else (self.resources[0][0].name + ' x ' + str(self.resources[0][1]))
+                            f'Заработок: ' + salary
                         ),
                         accessory=ui.Button(
                             label='Изменить', 
@@ -1223,6 +1468,10 @@ class RoleIncome(_BaseEntity):
                             custom_id=f'role_edit_income {self.id}',
                             emoji='⚙️'
                         )
+                    ),
+                    ui.Separator(),
+                    ui.TextDisplay(
+                        '-# ' + (', '.join(self.tags) if self.tags else 'Теги отсутствуют')
                     )
                 ),
                 ui.ActionRow(
@@ -1231,6 +1480,20 @@ class RoleIncome(_BaseEntity):
                         style=ButtonStyle.danger,
                         custom_id=f'role_delete {self.id}',
                         emoji='🗑️'
+                    )
+                ),
+                ui.ActionRow(
+                    ui.Button(
+                        label='Добавить тег',
+                        style=ButtonStyle.blurple,
+                        custom_id=f'role_add_tag {self.id}',
+                        emoji='⚙️'
+                    ),
+                    ui.Button(
+                        label='Удалить тег',
+                        style=ButtonStyle.blurple,
+                        custom_id=f'role_remove_tag {self.id}',
+                        emoji='⚙️'
                     )
                 )
             ]
@@ -1241,8 +1504,12 @@ class RoleIncome(_BaseEntity):
                 ui.Separator(),
                 ui.TextDisplay('Кулдаун: ' + form_str),
                 ui.TextDisplay(
-                    f'Заработок: ' + deps.bamount(str(self.currency_amount) + (self.currency.symbol or '')) if self.currency else deps.bamount(self.resources[0][0].name + ' x ' + str(self.resources[0][1]))
+                    f'Заработок: ' + salary
                 ),
+                ui.Separator(),
+                ui.TextDisplay(
+                    '-#' + (', '.join(self.tags) if self.tags else 'Теги отсутствуют')
+                )
             )
         ]
 
@@ -1273,14 +1540,14 @@ class _UserEntityMap(dict[int, object]):
         super().clear()
         for row in rows:
             key = int(row[self.key_column])
-            amount = int(row['amount'])
+            amount = _normalize_number(row['amount'])
             super().__setitem__(key, self._make_value(key, amount))
 
-    def _make_value(self, key: int, amount: int):
+    def _make_value(self, key: int, amount: int | float):
         return amount
 
-    def _normalize_value(self, value) -> int:
-        return int(value)
+    def _normalize_value(self, value) -> int | float:
+        return _normalize_number(value)
 
     def __getitem__(self, key: int | str):
         return super().__getitem__(int(key))
@@ -1379,13 +1646,14 @@ class _UserBalance(_UserEntityMap):
     table_name = 'user_balances'
     key_column = 'currency_id'
 
-    def _make_value(self, key: int, amount: int) -> Currency:
+    def _make_value(self, key: int, amount: int | float) -> Currency:
         currency = Currency(key)
         currency.amount = amount
         return currency
 
-    def _normalize_value(self, value: Currency | int) -> int:
-        return int(value.amount if isinstance(value, Currency) and value.amount is not None else value)
+    def _normalize_value(self, value: Currency | int | float) -> int:
+        raw_value = value.amount if isinstance(value, Currency) and value.amount is not None else value
+        return _truncate_number(raw_value) # type: ignore
 
     def get_objects(self) -> list[Currency]:
         """"""
@@ -1424,10 +1692,10 @@ class _UserInventory(_UserEntityMap):
         entry.amount = amount
         return entry
 
-    def _normalize_value(self, value: InventoryItem | int) -> int:
-        return int(value.amount if isinstance(value, InventoryItem) else value)
+    def _normalize_value(self, value: InventoryItem | int | float) -> int:
+        return _truncate_number(value.amount if isinstance(value, InventoryItem) else value)
 
-    def __setitem__(self, key: int | str, value: InventoryItem | int) -> None:
+    def __setitem__(self, key: int | str, value: InventoryItem | int | float) -> None:
         normalized_value = self._normalize_value(value)
         if normalized_value < 0:
             raise ValueError('Количество предметов не может быть отрицательным')

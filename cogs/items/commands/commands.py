@@ -23,7 +23,7 @@ class ItemCommands(Cog):
                 name: bool = False, 
                 desc: bool = False, 
                 cost: bool = False, 
-                role: bool = False,
+                role: bool = False
                 ):
             self.item = item
             self.name = name
@@ -111,7 +111,7 @@ class ItemCommands(Cog):
             inventory = interaction.user.get_inventory()
             inventory[self.item.id] = inventory.get(self.item.id, 0) + count
             
-            await interaction.response.send_message(f'Вы успешно приобрели {count} {self.item.name}', ephemeral=True) 
+            await interaction.response.send_message(f'Вы успешно приобрели {int(count)} {self.item.name}', ephemeral=True) 
 
     @command(name='item', aliases=['items'])
     async def item_command(self, ctx: Context, *, name: str = ''):
@@ -268,7 +268,7 @@ class ItemCommands(Cog):
                 if not flag:
                     await interaction.response.send_message('У вас нет необходимой роли!', ephemeral=True)
                     return
-            modal = self.BuyModal(item, interaction.user.get_balance()[deps.MAIN_CURRENCY_ID].amount or 0)
+            modal = self.BuyModal(item, int(interaction.user.get_balance()[deps.MAIN_CURRENCY_ID].amount or 0))
             await interaction.response.send_modal(modal)
 
         if not moderator_mode:
@@ -309,6 +309,7 @@ class ItemCommands(Cog):
             elif 'role' in option:
                 modal = self.EditsModal(item, 'Требуемая роль', interaction.message, [] if not (item.id in self.creates) else components, role=True)
                 await interaction.response.send_modal(modal)
+            
         
         elif option == 'item_delete':
             item = deps.ShopItem(custom_id.split()[1])

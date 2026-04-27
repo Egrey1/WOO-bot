@@ -13,19 +13,16 @@ class GiveCommand(Cog):
             color=Colour.red()
         )
         
-    async def give(self, interaction: MessageInteraction, member1: Member, member2: Member, amount: str, item: deps.ShopItem):
-        amount = amount.replace(',', '')
-        amount = amount.split('e')
-        amount = int(amount[0]) * (10 ** ((int(amount[1]) or 0) if len(amount) >= 2 else 0))
+    async def give(self, interaction: MessageInteraction, member1: Member, member2: Member, amount: int, item: deps.ShopItem):
         if interaction.user.id != member1.id:
             await interaction.response.send_message('Это не ваше интерактивное окно', ephemeral=True)
             return
         inv1 = member1.get_inventory()
         inv2 = member2.get_inventory()
-        amount = (int(amount) ** 2) ** 0.5
+        amount = int((int(amount) ** 2) ** 0.5) # type: ignore
         
         try:
-            if inv1[item.id].amount < amount:
+            if inv1[item.id].amount < amount: # type: ignore
                 await interaction.message.edit(embed=Embed(
                     title= 'Ошибка',
                     description='Недостаточно предметов',
@@ -41,11 +38,11 @@ class GiveCommand(Cog):
             ), view=None)
             await interaction.response.defer(with_message=False)
             return
-        inv1[item.id] -= amount
+        inv1[item.id] -= amount # type: ignore
         inv2[item.id] = inv2.get(item.id, 0) + amount # type: ignore
         await interaction.message.edit(embed=Embed(
             title='Операция прошла успешно',
-            description='Вы передали `' + item.name + '` в количестве ' + str(amount),
+            description='Вы передали \'' + item.name + '\' в количестве ' + str(amount),
             colour=Colour.green()
         ), view=None)
         await interaction.response.defer(with_message=False)
@@ -59,7 +56,10 @@ class GiveCommand(Cog):
             
 
     @command(name='give')
-    async def item_command(self, ctx: Context, member: Member, amount: int, *, name: str = ''):
+    async def item_command(self, ctx: Context, member: Member, amount: str, *, name: str = ''):
+        amount = amount.replace(',', '')
+        amount = amount.split('e') # type: ignore
+        amount = int(amount[0]) * (10 ** ((int(amount[1]) or 0) if len(amount) >= 2 else 0))
         items = [item for item in deps.ShopItem.all() if name.lower() in item.name.lower()]
 
         if len(items) <= 1:
@@ -74,14 +74,14 @@ class GiveCommand(Cog):
                 
                 await ctx.send(embed=Embed(
                     title='Подтвердите передачу',
-                    description='Подтвердите передачу предмета `' + items[0].name + '` в количестве ' + str(amount) 
+                    description='Подтвердите передачу предмета \'' + items[0].name + '\' в количестве ' + str(amount) 
                 ), view=view)
             else:
                 await ctx.send(embed=self._error_embed('Ошибка', 'Предмет не найден'))
             
 
         else:
-            self.find_items[ctx.author.id] = (items, member, amount)
+            self.find_items[ctx.author.id] = (items, member, amount) # type: ignore
             embed = Embed(
                 title="Выберите предмет",
                 description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(items))
@@ -160,7 +160,7 @@ class GiveCommand(Cog):
         
         await self.original_messages[message.author.id].edit(embed=Embed(
             title='Подтвердите передачу',
-            description='Подтвердите передачу предмета `' + items[0].name + '` в количестве ' + str(amount)
+            description='Подтвердите передачу предмета \'' + items[0].name + '\' в количестве ' + str(amount)
         ), view=view)
         
         # Очищаем данные

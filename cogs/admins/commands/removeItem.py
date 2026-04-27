@@ -2,9 +2,11 @@ from ..library import Cog, command, Context, Member, deps, Embed, Colour, asynci
 
 class RemoveItem(Cog):
 
-    def _add_item(self, member: Member, item: deps.ShopItem, count: int):
+    def _remove_item(self, member: Member, item: deps.ShopItem, count: int):
         inventory = member.get_inventory()
-        inventory[item.id] = inventory.get(item.id, 0) + count # type: ignore
+        current_count = inventory[item.id].amount if inventory.get(item.id, None) else 0 
+        count = min(count, current_count)
+        inventory[item.id] = current_count - count 
 
     
     find_items: dict[int, tuple[list[deps.ShopItem], Member, int]] = {}
@@ -21,7 +23,7 @@ class RemoveItem(Cog):
     @command(name='remove-item', aliases=['remove_item', 'item_remove', 'item-remove'])
     async def remove_item(self, ctx: Context,  member: Member, count: str, *, name: str):
         count = count.replace(',', '')
-        count = counnt.split('e')
+        count = count.split('e') # type: ignore
         count = int(count[0]) * (10 ** ((int(count[1]) or 0) if len(count) >= 2 else 0))
         rights = deps.Rights()
         moderator_mode = (
@@ -33,18 +35,18 @@ class RemoveItem(Cog):
             await ctx.send(embed=self._error_embed('Ошибка', 'У вас нет прав на выполнение этой команды'))
 
         items = [item for item in deps.ShopItem.all() if name.lower() in item.name.lower()]
-        count = -(((count ** 2) ** 0.5) // 1)
+        count = (((count ** 2) ** 0.5) // 1) # type: ignore
 
         if len(items) <= 1:
             if items:
-                self._add_item(member, items[0], count)
+                self._remove_item(member, items[0], count) # type: ignore
                 await ctx.send('Операция выполнена успешно!')
             else:
                 await ctx.send(embed=self._error_embed('Ошибка', 'Предмет не найден'))
             
 
         else:
-            self.find_items[ctx.author.id] = (items, member, count)
+            self.find_items[ctx.author.id] = (items, member, count) # type: ignore
             embed = Embed(
                 title="Выберите предмет",
                 description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0]))
@@ -107,7 +109,7 @@ class RemoveItem(Cog):
         
         # Обработка выбора
         selected_item = items[index] 
-        self._add_item(
+        self._remove_item(
             self.find_items[message.author.id][1], 
             selected_item, 
             self.find_items[message.author.id][2]

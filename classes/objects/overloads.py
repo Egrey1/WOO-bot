@@ -116,9 +116,10 @@ class NewRole(Role):
     def create_role_information(
         self,
         cooldown: int | dt.timedelta,
-        earning: int | None,
+        earning: int | float | None,
         currency: int | str | None,
         resources: list[tuple[int | str, int]] | str | None,
+        tags: list[str] | tuple[str, ...] | None = None,
     ) -> RoleIncome:
         cooldown_seconds = int(cooldown.total_seconds()) if isinstance(cooldown, dt.timedelta) else int(cooldown)
         normalized_resources = resources
@@ -135,15 +136,17 @@ class NewRole(Role):
             currency=int(currency) if currency is not None else None,
             currency_amount=earning,
             resources=normalized_resources, # type: ignore
+            tags=tags,
         )
 
     def edit_role_income(
         self,
         cooldown_seconds: int | None = None,
         currency: int | None = None,
-        currency_amount: int | None = None,
+        currency_amount: int | float | None = None,
         resources: list[tuple[int | str, int]] | None = None,
         is_active: bool | None = None,
+        tags: list[str] | tuple[str, ...] | None = None,
     ) -> None:
         role_income = RoleIncome.from_role(self)
         role_income.edit(
@@ -152,6 +155,7 @@ class NewRole(Role):
             currency_amount=currency_amount,
             resources=resources,
             is_active=is_active,
+            tags=tags,
         )
 
     def edit_role_information(self, **kwargs) -> None:
@@ -168,4 +172,5 @@ class NewRole(Role):
             currency_amount=kwargs.get('earning'),
             resources=kwargs.get('resources'),
             is_active=kwargs.get('is_active'),
+            tags=kwargs.get('tags'),
         )

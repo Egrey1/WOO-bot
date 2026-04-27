@@ -96,7 +96,7 @@ main_db: Connection
             `currency_id INTEGER`
                 Ссылка на `currencies.id`.
             `amount INTEGER`
-                Количество валюты у пользователя.
+                Количество валюты у пользователя. Может быть как положительным, так и отрицательным.
             `updated_at TEXT`
                 Время последнего изменения значения.
         Формат хранения:
@@ -137,6 +137,8 @@ main_db: Connection
                 Остаток предмета. `NULL` означает бесконечный запас.
             `is_active INTEGER`
                 Флаг активности предмета. Обычно `0` или `1`.
+            `tags TEXT`
+                Список пользовательских тегов предмета в формате `tag;tag;tag`.
             `created_at TEXT`
                 Время создания записи.
             `updated_at TEXT`
@@ -169,10 +171,12 @@ main_db: Connection
                 Кулдаун между сборами в секундах.
             `currency_id INTEGER`
                 Ссылка на `currencies.id`. Может быть `NULL`, если роль не выдает валюту.
-            `currency_amount INTEGER`
-                Размер валютной награды. Может быть `NULL`.
+            `currency_amount REAL`
+                Размер валютной награды. Может быть `NULL`, положительным, отрицательным или дробным.
             `is_active INTEGER`
                 Флаг активности записи. Обычно `0` или `1`.
+            `tags TEXT`
+                Список пользовательских тегов доходной роли в формате `tag;tag;tag`.
             `created_at TEXT`
                 Время создания записи.
             `updated_at TEXT`
@@ -210,6 +214,9 @@ main_db: Connection
 Заметки:
     - Для работы с `main_db` проект использует `sqlite3.Row`, поэтому строки БД
       читаются по именам колонок.
+    - При запуске проекта старые таблицы `role_incomes` и `user_balances`
+      автоматически мигрируются, если в них еще остались ограничения,
+      запрещающие отрицательные значения.
     - Объекты из `classes/objects/game_objects.py` уже знают, в какие таблицы
       обращаться, поэтому в основной логике чаще всего не нужен прямой SQL.
     - Для корректной работы связей в SQLite желательно включать
@@ -425,7 +432,7 @@ class Currency:
     is_main: bool
     created_at: str
     updated_at: str
-    amount: int | None
+    amount: int | float | None
 
     def __init__(self, id_: int | str) -> None:
         """
@@ -535,26 +542,40 @@ class Currency:
                 Количество валюты, если заполнен `amount`, иначе название валюты.
         """
 
-    def __iadd__(self, value: int) -> 'Currency': # type: ignore
+    def __float__(self) -> float: # type: ignore
+        """
+        Возвращает `amount` как число с плавающей точкой.
+
+        Возвращает:
+            `float`
+                Количество валюты, связанное с объектом.
+
+        Заметки:
+            Если `amount` не задан, возвращается `0.0`.
+        """
+
+    def __iadd__(self, value: int | float) -> 'Currency': # type: ignore
         """
         Увеличивает `amount` внутри объекта валюты.
 
         Параметры:
-            `value: int`
+            `value: int | float`
                 Насколько увеличить количество.
+                Если передано `float`, дробная часть отбрасывается через `int(value)`.
 
         Возвращает:
             `Currency`
                 Тот же объект с обновленным `amount`.
         """
 
-    def __isub__(self, value: int) -> 'Currency': # type: ignore
+    def __isub__(self, value: int | float) -> 'Currency': # type: ignore
         """
         Уменьшает `amount` внутри объекта валюты.
 
         Параметры:
-            `value: int`
+            `value: int | float`
                 Насколько уменьшить количество.
+                Если передано `float`, дробная часть отбрасывается через `int(value)`.
 
         Возвращает:
             `Currency`
@@ -746,6 +767,9 @@ class ShopItem:
             Остаток на складе. `None` означает бесконечный запас.
         `is_active: bool`
             Доступен ли предмет в магазине.
+        `tags: list[str]`
+            Пользовательские теги предмета. Хранятся в таблице `shop_items` как строка `tag;tag;tag`,
+            а в объекте представлены как обычный список строк.
         `created_at: str`
             Время создания записи.
         `updated_at: str`
@@ -764,6 +788,7 @@ class ShopItem:
     required_role_id: int | None
     stock: int | None
     is_active: bool
+    tags: List[str]
     created_at: str
     updated_at: str
     currency: Currency
@@ -794,7 +819,8 @@ class ShopItem:
                required_role: Role | int | None,
                currency: str | int,
                stock: int | None = None,
-               is_active: bool = True) -> 'ShopItem': # type: ignore
+               is_active: bool = True,
+               tags: List[str] | Tuple[str, ...] | None = None) -> 'ShopItem': # type: ignore
         """
         Создает новый предмет магазина.
 
@@ -814,6 +840,8 @@ class ShopItem:
                 Остаток предмета. `None` означает бесконечный запас.
             `is_active: bool = True`
                 Будет ли предмет сразу доступен.
+            `tags: list[str] | tuple[str, ...] | None = None`
+                Начальный список пользовательских тегов предмета.
 
         Возвращает:
             `ShopItem`
@@ -846,7 +874,8 @@ class ShopItem:
                 required_role: Role | int | None = None, 
                 currency: str | int | None = None,
                 stock: int | None = None,
-                is_active: bool | None = None):
+                is_active: bool | None = None,
+                tags: List[str] | Tuple[str, ...] | None = None):
         """
         Изменяет поля предмета магазина и перезагружает объект.
 
@@ -865,6 +894,8 @@ class ShopItem:
                 Новый остаток.
             `is_active: bool | None = None`
                 Новый флаг активности.
+            `tags: list[str] | tuple[str, ...] | None = None`
+                Новый полный список пользовательских тегов предмета.
 
         Возвращает:
             `None`
@@ -914,6 +945,45 @@ class ShopItem:
             Удаляются связанные строки из:
             - `user_inventory`
             - `shop_items`
+        """
+
+    def set_tags(self, tags: List[str] | Tuple[str, ...]) -> List[str]: # type: ignore
+        """
+        Полностью заменяет список пользовательских тегов предмета.
+
+        Параметры:
+            `tags: list[str] | tuple[str, ...]`
+                Новый полный список тегов.
+
+        Возвращает:
+            `list[str]`
+                Итоговый список тегов после сохранения.
+        """
+
+    def add_tag(self, tag: str) -> List[str]: # type: ignore
+        """
+        Добавляет один пользовательский тег предмету.
+
+        Параметры:
+            `tag: str`
+                Строка тега. Пустые строки игнорируются.
+
+        Возвращает:
+            `list[str]`
+                Обновленный список тегов.
+        """
+
+    def remove_tag(self, tag: str) -> List[str]: # type: ignore
+        """
+        Удаляет один пользовательский тег предмета.
+
+        Параметры:
+            `tag: str`
+                Тег, который нужно удалить.
+
+        Возвращает:
+            `list[str]`
+                Обновленный список тегов.
         """
 
     def get_v2component(self, moderator_mode: bool = False) -> list[Components | ActionRow]:
@@ -1024,8 +1094,9 @@ class InventoryItem:
                 Discord ID пользователя.
             `shop_item: ShopItem | int`
                 Предмет магазина или его ID.
-            `amount: int = 1`
+            `amount: int | float = 1`
                 Итоговое количество предметов.
+                Если передано `float`, дробная часть будет отброшена.
 
         Возвращает:
             `InventoryItem`
@@ -1036,13 +1107,14 @@ class InventoryItem:
                 Если количество отрицательное.
         """
 
-    def edit(self, amount: int) -> None:
+    def edit(self, amount: int | float) -> None:
         """
         Обновляет количество предметов в инвентаре.
 
         Параметры:
-            `amount: int`
+            `amount: int | float`
                 Новое количество предметов.
+                Если передано `float`, дробная часть будет отброшена.
 
         Возвращает:
             `None`
@@ -1081,26 +1153,28 @@ class InventoryItem:
                 Строковое представление поля `amount`.
         """
 
-    def __iadd__(self, value: int) -> 'InventoryItem': # type: ignore
+    def __iadd__(self, value: int | float) -> 'InventoryItem': # type: ignore
         """
         Увеличивает `amount` внутри объекта записи инвентаря.
 
         Параметры:
-            `value: int`
+            `value: int | float`
                 Насколько увеличить количество.
+                Если передано `float`, дробная часть отбрасывается через `int(value)`.
 
         Возвращает:
             `InventoryItem`
                 Тот же логический предмет с обновленным количеством.
         """
 
-    def __isub__(self, value: int) -> 'InventoryItem': # type: ignore
+    def __isub__(self, value: int | float) -> 'InventoryItem': # type: ignore
         """
         Уменьшает `amount` внутри объекта записи инвентаря.
 
         Параметры:
-            `value: int`
+            `value: int | float`
                 Насколько уменьшить количество.
+                Если передано `float`, дробная часть отбрасывается через `int(value)`.
 
         Возвращает:
             `InventoryItem`
@@ -1120,10 +1194,13 @@ class RoleIncome:
             Кулдаун между сборами в секундах.
         `currency_id: int | None`
             ID валюты награды.
-        `currency_amount: int | None`
+        `currency_amount: int | float | None`
             Размер награды в валюте.
         `is_active: bool`
             Активна ли доходная роль.
+        `tags: list[str]`
+            Пользовательские теги доходной роли. Хранятся в таблице `role_incomes`
+            как строка `tag;tag;tag`, а в объекте представлены списком строк.
         `created_at: str`
             Время создания записи.
         `updated_at: str`
@@ -1142,8 +1219,9 @@ class RoleIncome:
     role_id: int
     cooldown_seconds: int
     currency_id: int | None
-    currency_amount: int | None
+    currency_amount: int | float | None
     is_active: bool
+    tags: List[str]
     created_at: str
     updated_at: str
     currency: Currency | None
@@ -1204,9 +1282,10 @@ class RoleIncome:
                role: Role | int,
                cooldown_seconds: int,
                currency: 'Currency | int | None' = None, # type: ignore
-               currency_amount: int | None = None,
+               currency_amount: int | float | None = None,
                resources: List[Tuple[int | str, int]] | None = None,
-               is_active: bool = True) -> 'RoleIncome': # type: ignore
+               is_active: bool = True,
+               tags: List[str] | Tuple[str, ...] | None = None) -> 'RoleIncome': # type: ignore
         """
         Создает новую настройку дохода для роли.
 
@@ -1217,13 +1296,15 @@ class RoleIncome:
                 Кулдаун между сборами в секундах.
             `currency: Currency | int | None = None`
                 Валюта награды.
-            `currency_amount: int | None = None`
-                Размер награды в валюте.
+            `currency_amount: int | float | None = None`
+                Размер награды в валюте. Допускаются отрицательные и дробные значения.
             `resources: list[tuple[int | str, int]] | None = None`
                 Дополнительные ресурсы награды в формате
                 `(resource_id, amount)`.
             `is_active: bool = True`
                 Должна ли роль сразу быть активной.
+            `tags: list[str] | tuple[str, ...] | None = None`
+                Начальный список пользовательских тегов доходной роли.
 
         Возвращает:
             `RoleIncome`
@@ -1240,9 +1321,10 @@ class RoleIncome:
     def edit(self,
              cooldown_seconds: int | None = None,
              currency: 'Currency | int | None' = None, # type: ignore
-             currency_amount: int | None = None,
+             currency_amount: int | float | None = None,
              resources: List[Tuple[int | str, int]] | None = None,
-             is_active: bool | None = None):
+             is_active: bool | None = None,
+             tags: List[str] | Tuple[str, ...] | None = None):
         """
         Изменяет доходную роль и, при необходимости, полностью заменяет список ресурсов.
 
@@ -1251,13 +1333,15 @@ class RoleIncome:
                 Новый кулдаун в секундах.
             `currency: Currency | int | None = None`
                 Новая валюта награды.
-            `currency_amount: int | None = None`
-                Новый размер валютной награды.
+            `currency_amount: int | float | None = None`
+                Новый размер валютной награды. Допускаются отрицательные и дробные значения.
             `resources: list[tuple[int | str, int]] | None = None`
                 Новый полный список ресурсов роли. Если передан список, старые
                 ресурсы будут удалены и заменены.
             `is_active: bool | None = None`
                 Новый флаг активности.
+            `tags: list[str] | tuple[str, ...] | None = None`
+                Новый полный список пользовательских тегов роли.
 
         Возвращает:
             `None`
@@ -1314,6 +1398,45 @@ class RoleIncome:
             - `role_income_claims`
             - `role_income_resources`
             - `role_incomes`
+        """
+
+    def set_tags(self, tags: List[str] | Tuple[str, ...]) -> List[str]: # type: ignore
+        """
+        Полностью заменяет список пользовательских тегов доходной роли.
+
+        Параметры:
+            `tags: list[str] | tuple[str, ...]`
+                Новый полный список тегов.
+
+        Возвращает:
+            `list[str]`
+                Итоговый список тегов после сохранения.
+        """
+
+    def add_tag(self, tag: str) -> List[str]: # type: ignore
+        """
+        Добавляет один пользовательский тег доходной роли.
+
+        Параметры:
+            `tag: str`
+                Строка тега. Пустые строки игнорируются.
+
+        Возвращает:
+            `list[str]`
+                Обновленный список тегов.
+        """
+
+    def remove_tag(self, tag: str) -> List[str]: # type: ignore
+        """
+        Удаляет один пользовательский тег доходной роли.
+
+        Параметры:
+            `tag: str`
+                Тег, который нужно удалить.
+
+        Возвращает:
+            `list[str]`
+                Обновленный список тегов.
         """
     
     def get_v2component(self, moderator_mode: bool = False) -> list[Component | ActionRow]: # type: ignore
@@ -1665,4 +1788,32 @@ def get_all_balances() -> List[_UserBalance]:
 
 def bamount(amount):
     amount = str(amount)
-    return (','.join([amount[0 : (len(amount) % 3)]] + [amount[i:i + 3] for i in range(len(amount) % 3, len(amount), 3)])).strip(',')
+    if not amount:
+        return amount
+
+    suffix = ''
+    decimal_part = ''
+    numeric = amount
+
+    for index, char in enumerate(amount):
+        if not (char.isdigit() or char in '.-,'):
+            numeric = amount[:index]
+            suffix = amount[index:]
+            break
+
+    if '.' in numeric:
+        numeric, decimal_part = numeric.split('.', maxsplit=1)
+        decimal_part = '.' + decimal_part.rstrip('0')
+        if decimal_part == '.':
+            decimal_part = ''
+
+    sign = ''
+    if numeric.startswith('-'):
+        sign = '-'
+        numeric = numeric[1:]
+
+    if not numeric:
+        return sign + decimal_part + suffix
+
+    grouped = ','.join([numeric[0 : (len(numeric) % 3)]] + [numeric[i:i + 3] for i in range(len(numeric) % 3, len(numeric), 3)]).strip(',')
+    return sign + grouped + decimal_part + suffix

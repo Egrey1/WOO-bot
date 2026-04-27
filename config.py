@@ -17,17 +17,21 @@ def first_config():
         intents=ds.Intents.all(), 
         sync_commands=True, 
         allowed_mentions=ds.AllowedMentions.none(),
-        help_command=None
+        help_command=None,
+        strip_after_prefix=True
     )
     
     deps.TOKEN = getenv('TOKEN')
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.10 Исправление timestamp в команде !collect, изменение интерфейса в !shop, добавлениие пагинации в !top с улучшением визуала' 
+    deps.VERSION = '2.11 Добавление тегов. Теперь роль заработка может брать еще и проценты' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
+    deps.rights.execute('PRAGMA foreign_keys = ON')
     deps.main_db = cls.NewConnection('databases2/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row
+    deps.main_db.execute('PRAGMA foreign_keys = ON')
+    cls.migrate_main_db()
 
     deps.Rights = cls.Rights
     deps.Resource = cls.Resource

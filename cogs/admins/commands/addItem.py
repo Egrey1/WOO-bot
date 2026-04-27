@@ -4,7 +4,7 @@ class AddItem(Cog):
 
     def _add_item(self, member: Member, item: deps.ShopItem, count: int):
         inventory = member.get_inventory()
-        inventory[item.id] = inventory.get(item.id, 0) + count # type: ignore
+        inventory[item.id] = (inventory[item.id].amount if inventory.get(item.id, None) else 0 ) + count
 
     
     find_items: dict[int, tuple[list[deps.ShopItem], Member, int]] = {}
@@ -21,7 +21,7 @@ class AddItem(Cog):
     @command(name='add-item', aliases=['add_item', 'item_add', 'item-add'])
     async def add_item(self, ctx: Context,  member: Member, count: str, *, name: str):
         count = count.replace(',', '')
-        count = counnt.split('e')
+        count = count.split('e') # type: ignore
         count = int(count[0]) * (10 ** ((int(count[1]) or 0) if len(count) >= 2 else 0))
         rights = deps.Rights()
         moderator_mode = (
@@ -33,18 +33,18 @@ class AddItem(Cog):
             await ctx.send(embed=self._error_embed('Ошибка', 'У вас нет прав на выполнение этой команды'))
 
         items = [item for item in deps.ShopItem.all() if name.lower() in item.name.lower()]
-        count = ((count ** 2) ** 0.5) // 1
+        count = ((count ** 2) ** 0.5) // 1 # type: ignore
 
         if len(items) <= 1:
             if items:
-                self._add_item(member, items[0], count)
+                self._add_item(member, items[0], count) # type: ignore
                 await ctx.send('Операция выполнена успешно!')
             else:
                 await ctx.send(embed=self._error_embed('Ошибка', 'Предмет не найден'))
             
 
         else:
-            self.find_items[ctx.author.id] = (items, member, count)
+            self.find_items[ctx.author.id] = (items, member, count) # type: ignore
             embed = Embed(
                 title="Выберите предмет",
                 description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0]))
