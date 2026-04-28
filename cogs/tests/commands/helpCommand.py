@@ -1,8 +1,9 @@
-from ..library import Cog, Context, command, TextDisplay, Container, Separator, MessageFlags, deps
+from ..library import Cog, Context, command, TextDisplay, Container, Separator, MessageFlags, deps, asyncio
 
 class HelpCommand(Cog):
     @command('help')
     async def help(self, ctx: Context, name: str | None = None):
+        await asyncio.sleep(1)
         if name == 'tags':
             components = [
                 Container(
@@ -22,6 +23,9 @@ class HelpCommand(Cog):
                     Separator(),
                     TextDisplay('### ignorecooldown'),
                     TextDisplay('Этот тег позволяет роли игнорировать ее кд'),
+                    Separator(),
+                    TextDisplay('### autocollect'),
+                    TextDisplay('При использовании этого тега заработок с роли будет начисляться автоматически. Если кд слишком маленькое или вместе с этим тегом будет использоваться ignorecooldown, то автоколлект будет работать раз в час'),
                     Separator(),
                     Separator(),
                     TextDisplay('## Пользовательские теги'),
@@ -55,6 +59,11 @@ class HelpCommand(Cog):
                     TextDisplay('## !pay, !give'),
                     TextDisplay(
                         'Первая команда передает деньги другому участнику, вторая уже предмет \n ```!pay @StarBot 100``` ```!give @StarBot 250 Артиллерийская гаубица```'
+                    ),
+                    Separator(),
+                    TextDisplay('## !help'),
+                    TextDisplay(
+                        'Если без параметров, то вы получите это же окно. Доступные справки: tags'
                     ),
                     Separator(),
                     Separator(),

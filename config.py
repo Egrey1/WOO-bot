@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.13' 
+    deps.VERSION = '2.13 Добавление в !help параметров. Развитие использования тегов' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
@@ -56,11 +56,11 @@ def first_config():
     
 
 async def second_config():
-    import cogs as _
     try:
         deps.main_guild = await deps.bot.fetch_guild(deps.MAIN_GUILD_ID)
     except:
         logging.warning('Основной сервер получить не удалось')
+    import cogs as _
     logging.info(f'Бот успешно запущен как {deps.bot.user}')
     logging.info(f'Количество загруженных когов/расширений: {len(deps.bot.cogs)}')
     logging.info(f'Количество доступных команд: {len(deps.bot.all_commands)}')

@@ -20,9 +20,10 @@ class CollectCommand(Cog):
             roleincome = role.get_role_information()
             if roleincome:
                 last_claim = roleincome.get_last_claim_at(ctx.author.id)
-                seconds_passed = (dt.datetime.now() - last_claim).total_seconds()
-                if ((last_claim is not None) and (seconds_passed < roleincome.cooldown_seconds)) and not ('ignorecooldown' in roleincome.tags):
-                    continue
+                if last_claim is not None:
+                    seconds_passed = (dt.datetime.now() - last_claim).total_seconds()
+                    if ((seconds_passed < roleincome.cooldown_seconds)) and not ('ignorecooldown' in roleincome.tags):
+                        continue
 
                 if 'percentageI' in roleincome.tags:
                     percentage_income += (roleincome.currency_amount or 0) / 100

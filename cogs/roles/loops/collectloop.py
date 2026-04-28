@@ -1,24 +1,26 @@
 from ..library import loop, deps, Role, dt, Member, logging
 
 class CollectLoop:
-    @loop(seconds=20)
+    @loop(hours=1)
     async def collect_loop(self):
         logging.info('Сбор автоколлектов')
         roleincomes: list[deps.RoleIncome] = []
         for roleincome in deps.RoleIncome.all(True):
             roleincome = deps.RoleIncome(roleincome.id)
-            if 'autocollect' in roleincome.tags:
-                roleincomes.append(roleincome)
-        roles: list[Role] = []
+            # if 'autocollect' in roleincome.tags:
+            roleincomes.append(roleincome)
         members: set[Member] = set()
+
+        a = await deps.main_guild.chunk()
+
         for roleincome in roleincomes:
-            try:
-                roles.append(await deps.main_guild.fetch_role(roleincome.role_id))
-            except:
+            role = deps.main_guild.get_role(roleincome.role_id)
+            if role:
+                async for member in deps.main_guild.fetch_members(limit=None):
+                    if role in member.roles:
+                        members.add(member)
+            else:
                 continue
-        
-        for role in roles:
-            members = members.union(role.members)
         
         
         for member in members:
@@ -31,10 +33,13 @@ class CollectLoop:
             for role in member.roles: 
                 roleincome = role.get_role_information()
                 if roleincome:
-                    last_claim = roleincome.get_last_claim_at(member.id)
-                    seconds_passed = (dt.datetime.now() - last_claim).total_seconds()
-                    if ((last_claim is not None) and (seconds_passed < roleincome.cooldown_seconds)) and not ('ignorecooldown' in roleincome.tags):
+                    if 'autocollect' not in roleincome.tags:
                         continue
+                    last_claim = roleincome.get_last_claim_at(member.id)
+                    if last_claim is not None:
+                        seconds_passed = (dt.datetime.now() - last_claim).total_seconds()
+                        if ((seconds_passed < roleincome.cooldown_seconds)) and not ('ignorecooldown' in roleincome.tags):
+                            continue
 
                     if 'percentageI' in roleincome.tags:
                         percentage_income += (roleincome.currency_amount or 0) / 100
@@ -53,6 +58,8 @@ class CollectLoop:
                 roleincome = role.get_role_information()
 
                 if roleincome and roleincome.is_active:
+                    if 'autocollect' not in roleincome.tags:
+                        continue
                     last_claim: dt.datetime = roleincome.get_last_claim_at(member.id)
                     now = dt.datetime.now()
                     if ((last_claim is not None) and (now - last_claim).total_seconds() < roleincome.cooldown_seconds) and not ('ignorecooldown' in roleincome.tags):
