@@ -1486,13 +1486,13 @@ class RoleIncome(_BaseEntity):
                     ui.Button(
                         label='Добавить тег',
                         style=ButtonStyle.blurple,
-                        custom_id=f'role_add_tag {self.id}',
+                        custom_id=f'role_edit_add_tag {self.id}',
                         emoji='⚙️'
                     ),
                     ui.Button(
                         label='Удалить тег',
                         style=ButtonStyle.blurple,
-                        custom_id=f'role_remove_tag {self.id}',
+                        custom_id=f'role_edit_remove_tag {self.id}',
                         emoji='⚙️'
                     )
                 )
@@ -1508,7 +1508,7 @@ class RoleIncome(_BaseEntity):
                 ),
                 ui.Separator(),
                 ui.TextDisplay(
-                    '-#' + (', '.join(self.tags) if self.tags else 'Теги отсутствуют')
+                    '-# ' + (', '.join(self.tags) if self.tags else 'Теги отсутствуют')
                 )
             )
         ]

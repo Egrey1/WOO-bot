@@ -1,8 +1,10 @@
 from .commands import *
+from .loops import CollectLoop
 
-class Roles(RolesCommands):
+class Roles(RolesCommands, CollectLoop):
     def __init__(self, bot):
         self.bot = bot
+        self.collect_loop.start()
 
 def setup(bot):
     bot.add_cog(Roles(bot))

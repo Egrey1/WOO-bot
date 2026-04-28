@@ -1,6 +1,6 @@
 from sqlite3 import Connection
 from disnake.ext.commands import Bot
-from disnake import Component, Embed, Intents, Member, Role, User
+from disnake import Component, Embed, Guild, Intents, Member, Role, User
 from typing import List, Tuple
 import datetime as dt
 from disnake.ui import Components, ActionRow
@@ -10,6 +10,13 @@ intents: Intents
 PREFIX: tuple[str]
 TOKEN: str
 VERSION: str
+MAIN_GUILD_ID: int
+main_guild: Guild
+test_mode: bool
+
+MAIN_CURRENCY_SYMVOL: str
+MAIN_CURRENCY_ID: int
+
 
 rights: Connection
 """
@@ -223,9 +230,6 @@ main_db: Connection
       `PRAGMA foreign_keys = ON`.
 """
 
-MAIN_CURRENCY_SYMVOL: str
-MAIN_CURRENCY_ID: int
-
 class Rights:
     """
     Объект доступа к таблице `rights` из базы `rights.db`.
@@ -395,7 +399,6 @@ class Rights:
     
     def is_administrator(self, user: Member | User) -> bool: # type: ignore
         """Проверяет, имеет ли права user на управление другими ролями"""
-
 
 class Currency:
     """

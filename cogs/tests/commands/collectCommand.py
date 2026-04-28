@@ -19,12 +19,21 @@ class CollectCommand(Cog):
         for role in ctx.author.roles: # type: ignore
             roleincome = role.get_role_information()
             if roleincome:
+                last_claim = roleincome.get_last_claim_at(ctx.author.id)
+                seconds_passed = (dt.datetime.now() - last_claim).total_seconds()
+                if ((last_claim is not None) and (seconds_passed < roleincome.cooldown_seconds)) and not ('ignorecooldown' in roleincome.tags):
+                    continue
+
                 if 'percentageI' in roleincome.tags:
                     percentage_income += (roleincome.currency_amount or 0) / 100
+                    roleincome.set_last_claim_at(ctx.author.id, dt.datetime.now())
                 if 'percentageBafter' in roleincome.tags:
                     percentage_balance_after += (roleincome.currency_amount or 0) / 100
+                    roleincome.set_last_claim_at(ctx.author.id, dt.datetime.now())
                 if 'percentageBbefore' in roleincome.tags:
                     percentage_balance_before += (roleincome.currency_amount or 0) / 100
+                    roleincome.set_last_claim_at(ctx.author.id, dt.datetime.now())
+                
         user_balance[deps.MAIN_CURRENCY_ID] = int((user_balance[deps.MAIN_CURRENCY_ID].amount or 0) * percentage_balance_before)
 
 
@@ -34,7 +43,7 @@ class CollectCommand(Cog):
             if roleincome and roleincome.is_active:
                 last_claim: dt.datetime = roleincome.get_last_claim_at(ctx.author.id)
                 now = dt.datetime.now()
-                if (last_claim is not None) and (now - last_claim).total_seconds() < roleincome.cooldown_seconds:
+                if ((last_claim is not None) and (now - last_claim).total_seconds() < roleincome.cooldown_seconds) and not ('ignorecooldown' in roleincome.tags):
                     min_last = min(min_last, roleincome.cooldown_seconds - (now - last_claim).total_seconds()) if min_last != 0 else roleincome.cooldown_seconds - (now - last_claim).total_seconds()
                     continue
 
@@ -43,7 +52,7 @@ class CollectCommand(Cog):
 
                 if roleincome.currency_id:
                     user_balance[roleincome.currency_id] += (roleincome.currency_amount or 0) * percentage_income
-                    income_balance[role.mention] = deps.bamount(roleincome.currency_amount) + ' - ' + deps.bamount(percentage_income * 100) + '% -> ' + deps.bamount(roleincome.currency_amount * percentage_income) # type: ignore
+                    income_balance[role.mention] = deps.bamount(roleincome.currency_amount) + ((' - ' + deps.bamount(100 - percentage_income * 100) + '% -> ' + deps.bamount(roleincome.currency_amount * percentage_income)) if int(percentage_income) != 1 else '') # type: ignore
                     sums += (roleincome.currency_amount or 0) * percentage_income
                 
                 for resource, amount in roleincome.resources:
@@ -53,6 +62,7 @@ class CollectCommand(Cog):
                 roleincome.set_last_claim_at(ctx.author.id, now)
         old = deps.bamount(old)
         sums = deps.bamount(sums)
+        user_balance[deps.MAIN_CURRENCY_ID] = int((user_balance[deps.MAIN_CURRENCY_ID].amount or 0) * percentage_balance_after)
 
         if income_balance or income_resource:
             embed = Embed(

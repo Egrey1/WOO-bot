@@ -52,9 +52,11 @@ class RolesCommands(Cog):
                 if value[-1] != '%':
                     self.roleincome.edit(currency_amount=int(value))
                     self.roleincome.remove_tag('percentageI')
+                    self.roleincome.remove_tag('ignorecooldown')
                 else:
                     self.roleincome.edit(currency_amount=int(value[:-1]))
                     self.roleincome.add_tag('percentageI')
+                    self.roleincome.add_tag('ignorecooldown')
             
             elif self.add_tag:
                 value = value.replace(';', ',')

@@ -22,8 +22,9 @@ def first_config():
     )
     
     deps.TOKEN = getenv('TOKEN')
+    deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.11 Добавление тегов. Теперь роль заработка может брать еще и проценты' 
+    deps.VERSION = '2.13' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
@@ -31,6 +32,7 @@ def first_config():
     deps.main_db = cls.NewConnection('databases2/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row
     deps.main_db.execute('PRAGMA foreign_keys = ON')
+    deps.MAIN_GUILD_ID = 1365405287007125666 if not deps.test_mode else 1051925846170030172
     cls.migrate_main_db()
 
     deps.Rights = cls.Rights
@@ -55,6 +57,10 @@ def first_config():
 
 async def second_config():
     import cogs as _
+    try:
+        deps.main_guild = await deps.bot.fetch_guild(deps.MAIN_GUILD_ID)
+    except:
+        logging.warning('Основной сервер получить не удалось')
     logging.info(f'Бот успешно запущен как {deps.bot.user}')
     logging.info(f'Количество загруженных когов/расширений: {len(deps.bot.cogs)}')
     logging.info(f'Количество доступных команд: {len(deps.bot.all_commands)}')
