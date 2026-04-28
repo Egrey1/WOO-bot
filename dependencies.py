@@ -1789,7 +1789,7 @@ def get_all_balances() -> List[_UserBalance]:
 
     return [_UserBalance(row['user_id']) for row in rows]
 
-def bamount(amount):
+def bamount(amount, space_mode: bool = False):
     amount = str(amount)
     if not amount:
         return amount
@@ -1812,7 +1812,7 @@ def bamount(amount):
 
     sign = ''
     if numeric.startswith('-'):
-        sign = '-'
+        sign = '-' + (' ' * space_mode)
         numeric = numeric[1:]
 
     if not numeric:

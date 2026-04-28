@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.13 Добавление в !help параметров. Развитие использования тегов' 
+    deps.VERSION = '2.13 Добавление в !help параметров. Развитие использования тегов. Улучшение визуала коллекта. Добавление команды !iteminfo' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row

@@ -1,8 +1,12 @@
 from ..library import loop, deps, Role, dt, Member, logging
 
 class CollectLoop:
+    _first_time: bool = True
     @loop(hours=1)
     async def collect_loop(self):
+        if self._first_time:
+            self._first_time = False
+            return
         logging.info('Сбор автоколлектов')
         roleincomes: list[deps.RoleIncome] = []
         for roleincome in deps.RoleIncome.all(True):

@@ -21,7 +21,7 @@ class BuyCommand(Cog):
             return
 
         for item in deps.ShopItem.all():
-            if item_name in item.name:
+            if item_name.lower() in item.name.lower() and item.is_active:
                 self.items[ctx.author.id] += [item]
 
         if len(self.items[ctx.author.id]) == 1:
@@ -68,7 +68,7 @@ class BuyCommand(Cog):
     
     @buy_slash.autocomplete('предмет')
     async def buy_slash_autocomplete(self, interaction: CommandInteraction, current: str):
-        return [item.name for item in deps.ShopItem.all() if current in item.name][:25]
+        return [item.name for item in deps.ShopItem.all() if current.lower().strip() in item.name.lower() and item.is_active][:25]
 
     def _buy_process(self, author: User | Member, item: deps.ShopItem, count: int) -> Embed:
         balance = author.get_balance()[deps.MAIN_CURRENCY_ID].amount
@@ -99,7 +99,7 @@ class BuyCommand(Cog):
         author.get_balance()[deps.MAIN_CURRENCY_ID] -= item.cost_amount * count
         return Embed(
             title='Успешно куплено!',
-            description= f'Вы успешно купили \'{item.name}\' в количестве `{deps.bamount(count)}` штук за `{item.cost_amount * count}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}`',
+            description= f'Вы успешно купили \'{item.name}\' в количестве `{deps.bamount(count)}` штук за `{deps.bamount(item.cost_amount * count)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}`',
             colour=Colour.green()) 
     
     @Cog.listener()

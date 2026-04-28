@@ -10,7 +10,7 @@ class CollectCommand(Cog):
         income_resource = {}
         resources_sums = {}
         user_balance = ctx.author.get_balance()
-        old = user_balance[deps.MAIN_CURRENCY_ID]
+        old = int(user_balance[deps.MAIN_CURRENCY_ID])
         user_resources = ctx.author.get_resources()
         percentage_income = 1
         percentage_balance_after = 1
@@ -36,7 +36,7 @@ class CollectCommand(Cog):
                     roleincome.set_last_claim_at(ctx.author.id, dt.datetime.now())
                 
         user_balance[deps.MAIN_CURRENCY_ID] = int((user_balance[deps.MAIN_CURRENCY_ID].amount or 0) * percentage_balance_before)
-
+        perc_minus = old - int(user_balance[deps.MAIN_CURRENCY_ID])
 
         for role in ctx.author.roles: # type: ignore
             roleincome = role.get_role_information()
@@ -63,14 +63,16 @@ class CollectCommand(Cog):
                 roleincome.set_last_claim_at(ctx.author.id, now)
         old = deps.bamount(old)
         sums = deps.bamount(sums)
+        perc_salary_minus = int(user_balance[deps.MAIN_CURRENCY_ID])
         user_balance[deps.MAIN_CURRENCY_ID] = int((user_balance[deps.MAIN_CURRENCY_ID].amount or 0) * percentage_balance_after)
+        perc_salary_minus = perc_salary_minus - int(user_balance[deps.MAIN_CURRENCY_ID])
 
         if income_balance or income_resource:
             embed = Embed(
                 title='Изменение баланса', 
                 description= (
-                    f'Баланс равен {deps.bamount(user_balance[deps.MAIN_CURRENCY_ID].amount or 0)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
-                    (f' <- {old} + {sums}\n\n' if sums != 0 else '') + 
+                    f'{deps.bamount(user_balance[deps.MAIN_CURRENCY_ID].amount or 0)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
+                    (f' <- {'(' if perc_salary_minus else ''}{old} {(deps.bamount(-perc_minus, True) + ' ') if perc_minus else ''}+ {sums}{') ' + deps.bamount(-perc_salary_minus, True) if perc_salary_minus else ''}\n\n' if sums != 0 else '') + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_balance.items()) + 
                             '\n\n' + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_resource.items())[:-1])

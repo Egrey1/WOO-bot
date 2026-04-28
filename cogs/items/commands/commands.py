@@ -1,7 +1,7 @@
 from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View
 
 class ItemCommands(Cog):
-    find_items: dict[int, list[deps.ShopItem]] = {}
+    find_items: dict[int, tuple[list[deps.ShopItem], bool]] = {}
     waiting_users: dict[int, tuple[int, asyncio.Task]] = {}  # user_id: (channel_id, timeout_task)
     original_messages: dict[int, Message] = {}
     creates: list[int] = []
@@ -145,10 +145,10 @@ class ItemCommands(Cog):
             
 
         else:
-            self.find_items[ctx.author.id] = items
+            self.find_items[ctx.author.id] = (items, moderator_mode)
             embed = Embed(
                 title="Выберите предмет",
-                description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id]))
+                description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0]))
             )
             if name and moderator_mode and not any(name == role.name for role in items):
                 view = View()
@@ -164,7 +164,30 @@ class ItemCommands(Cog):
 
             timeout_task = asyncio.create_task(self._timeout_handler(ctx))
             self.waiting_users[ctx.author.id] = (ctx.channel.id, timeout_task)
-            
+
+    @command(name='iteminfo', aliases=['item-info', 'item_info'])
+    async def iteminfo_command(self, ctx: Context, *, name: str = ''):
+        items = [item for item in deps.ShopItem.all() if name.lower() in item.name.lower()]
+        components = items[0].get_v2component() if items else []
+
+        if len(items) <= 1:
+            if components:
+                await ctx.send(
+                    components=components,  # type: ignore
+                    flags=MessageFlags(is_components_v2=True)) 
+            else:
+                await ctx.send(embed=self._error_embed('Ошибка', 'Предмет не найден'))
+        else:
+            self.find_items[ctx.author.id] = (items, False)
+            embed = Embed(
+                title="Выберите предмет",
+                description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0]))
+            )
+            self.original_messages[ctx.author.id] = await ctx.send(embed=embed)
+
+            timeout_task = asyncio.create_task(self._timeout_handler(ctx))
+            self.waiting_users[ctx.author.id] = (ctx.channel.id, timeout_task)
+
     
     async def _timeout_handler(self, ctx: Context):
         await asyncio.sleep(30)
@@ -176,7 +199,7 @@ class ItemCommands(Cog):
                 description='Вы не выбрали предмет в течении 30 секунд',
                 color=Colour.red()
             )
-            await self.original_messages[ctx.author.id].edit(embed=embed)
+            await self.original_messages[ctx.author.id].edit(embed=embed, view=None)
             self.original_messages.pop(ctx.author.id, None)
     
     @Cog.listener()
@@ -188,11 +211,7 @@ class ItemCommands(Cog):
         if message.channel.id != channel_id:
             return
         
-        rights = deps.Rights()
-        moderator_mode = (
-                message.author.guild_permissions.administrator or  # type: ignore
-                rights.is_administrator(message.author) or  
-                rights.is_manage_items(message.author))
+        moderator_mode = self.find_items.get(message.author.id, [[], False])[1]
         
         if not message.content.isdigit():
             embed = Embed(
@@ -207,7 +226,7 @@ class ItemCommands(Cog):
             return
         
         index = int(message.content) - 1
-        items = self.find_items.get(message.author.id, [])
+        items = self.find_items.get(message.author.id, [[]])[0]
         if index < 0 or index >= len(items):
             embed = Embed(
                 title='Неверные данные',

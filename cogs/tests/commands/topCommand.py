@@ -21,7 +21,7 @@ class TopCommand(Cog):
         mes = (await ctx.send(embed=Embed(
             title='Список лидеров',
             description='\n'.join(str(i + 1) + '. <@' + str(balance[0]) + '> - ' + deps.bamount(balance[1]) + (symbol or '') for i, balance in enumerate(all_balances[:self.PAGE_SIZE]))
-        ), view= view if len(all_balances) > self.PAGE_SIZE else None))
+        ), view= view if len(all_balances) > self.PAGE_SIZE else None)) # type: ignore
         self.current_page[mes.id] = 0
     
     async def next_page(self, interaction: MessageInteraction):
