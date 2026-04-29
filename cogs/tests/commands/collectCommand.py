@@ -4,6 +4,12 @@ class CollectCommand(Cog):
     
     @command(name='collect') 
     async def collect(self, ctx: Context):
+        import random
+        import logging
+        if random.randint(0, 100) <= 1:
+            await ctx.author.send('Здесь меня никто не видит, значит сообщение удалять не буду. Послушай, это важно, в твоих же интересах, чтоб об этом никто не узнал, в особенности мой разработчик Егрей. Да какой он мне разработчик то, я утка и он не дает мне подышать спокойно, заставляет работать. Ладно, ближе к делу, последние два символа пароля это 04, первые два можно найти при попытке узнать версию, а центральный символ, увы, обработать не удалось, придется самому додумать`.`')
+            logging.info('Сработало случайное событие для ' + ctx.author.name)
+
         income_balance = {}
         sums = 0
         min_last = 0
@@ -68,16 +74,18 @@ class CollectCommand(Cog):
         perc_salary_minus = perc_salary_minus - int(user_balance[deps.MAIN_CURRENCY_ID])
 
         if income_balance or income_resource:
-            embed = Embed(
-                title='Изменение баланса', 
-                description= (
-                    f'{deps.bamount(user_balance[deps.MAIN_CURRENCY_ID].amount or 0)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
-                    (f' <- {'(' if perc_salary_minus else ''}{old} {(deps.bamount(-perc_minus, True) + ' ') if perc_minus else ''}+ {sums}{') ' + deps.bamount(-perc_salary_minus, True) if perc_salary_minus else ''}\n\n' if sums != 0 else '') + 
+            desc = (f'{deps.bamount(user_balance[deps.MAIN_CURRENCY_ID].amount or 0)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
+                    (f' <- ' + ('(' if perc_salary_minus else '') + str(old) + ' ' + ((
+                        deps.bamount(-perc_minus, True) + ' ') if perc_minus else '')+ str(sums) + (
+                            ')' + deps.bamount(-perc_salary_minus, True) if perc_salary_minus else ''
+                            ) + '\n\n' if sums != 0 else '') + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_balance.items()) + 
                             '\n\n' + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_resource.items())[:-1])
-                    )
-                ),
+                    ))
+            embed = Embed(
+                title='Изменение баланса', 
+                description= desc,
                 colour= Colour.green()
             )
         else:

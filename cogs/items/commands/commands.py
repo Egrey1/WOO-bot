@@ -1,4 +1,4 @@
-from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View
+from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View, Role
 
 class ItemCommands(Cog):
     find_items: dict[int, tuple[list[deps.ShopItem], bool]] = {}
@@ -148,7 +148,7 @@ class ItemCommands(Cog):
             self.find_items[ctx.author.id] = (items, moderator_mode)
             embed = Embed(
                 title="Выберите предмет",
-                description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0]))
+                description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0][:50]))
             )
             if name and moderator_mode and not any(name == role.name for role in items):
                 view = View()
@@ -181,7 +181,7 @@ class ItemCommands(Cog):
             self.find_items[ctx.author.id] = (items, False)
             embed = Embed(
                 title="Выберите предмет",
-                description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0]))
+                description='\n'.join([f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0])][:50])
             )
             self.original_messages[ctx.author.id] = await ctx.send(embed=embed)
 
@@ -380,4 +380,21 @@ class ItemCommands(Cog):
                 flags=MessageFlags(is_components_v2=True)
             )
 
+
+    @Cog.listener()
+    async def on_dropdown(self, interaction: MessageInteraction):
+        custom_id = interaction.component.custom_id
+        if not custom_id or not custom_id.startswith('item'):
+            return
+        
+        if 'item_edit' in custom_id:
+            if 'role' in custom_id:
+                await interaction.response.defer(with_message=False)
+                value: Role = interaction.resolved_values[0]  # type: ignore
+                item = deps.ShopItem(custom_id.split()[1])
+                item.edit(required_role=value)
+                await interaction.message.edit(
+                    components=item.get_v2component(True), # type: ignore
+                    flags=MessageFlags(is_components_v2=True)
+                )
 

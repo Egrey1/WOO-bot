@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.13 Добавление в !help параметров. Развитие использования тегов. Улучшение визуала коллекта. Добавление команды !iteminfo' 
+    deps.VERSION = '2.14 Изменение интерфейса команды !bal, облегчение создания предметов' 
     
     deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
@@ -53,6 +53,7 @@ def first_config():
     ds_user._UserTag.get_balance = cls.NewUser.get_balance # type: ignore
     ds_user._UserTag.get_resources = cls.NewUser.get_resources # type: ignore
     ds_user._UserTag.get_inventory = cls.NewUser.get_inventory # type: ignore
+    ds_user._UserTag.get_v2balance = cls.NewUser.get_v2balance # type: ignore
     
 
 async def second_config():

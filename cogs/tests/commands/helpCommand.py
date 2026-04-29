@@ -35,6 +35,24 @@ class HelpCommand(Cog):
                     TextDisplay('-# ' + deps.VERSION)
                 )
             ]
+        elif name in ('duck', 'ducks'):
+            components = [
+                Container(
+                    TextDisplay('# Справка по уткам'),
+                    Separator(),
+                    Separator(),
+                    TextDisplay('Они хорошенькие и добренькие'),
+                    Separator(),
+                    TextDisplay('Они любят всех'),
+                    Separator(),
+                    TextDisplay('Они прыгают от счастья когда их кормят'),
+                    Separator(),
+                    TextDisplay('Они создают бота для сервера Starlight RP, Егрею только ничего не говорите'),
+                    Separator(),
+                    TextDisplay('-# Мне нужна поддержка`.` `.` `.`'),
+                    Separator(),
+                )
+            ]
         else:
             components = [
                 Container(

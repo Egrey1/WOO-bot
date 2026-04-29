@@ -46,15 +46,17 @@ class RolesCommands(Cog):
                     self.roleincome.edit(cooldown_seconds=int(value[:-1]) * 3600)
             
             elif self.income:
+                a = -1 if value[0] == '-' else 1
+                value = value[1:] if value[0] in '+-' else value
                 if (not value.isdigit()) and ((value[-1] != '%') and (not value[:-1].isdigit())):
                     await interaction.response.send_message('Ожидалось число или процент!', ephemeral=True)
                     return
                 if value[-1] != '%':
-                    self.roleincome.edit(currency_amount=int(value))
+                    self.roleincome.edit(currency_amount=int(value) * a)
                     self.roleincome.remove_tag('percentageI')
                     self.roleincome.remove_tag('ignorecooldown')
                 else:
-                    self.roleincome.edit(currency_amount=int(value[:-1]))
+                    self.roleincome.edit(currency_amount=int(value[:-1]) * a)
                     self.roleincome.add_tag('percentageI')
                     self.roleincome.add_tag('ignorecooldown')
             
@@ -225,4 +227,4 @@ class RolesCommands(Cog):
                 await interaction.message.delete()
                 await interaction.response.send_message('Роль удалена')
         
-            
+        

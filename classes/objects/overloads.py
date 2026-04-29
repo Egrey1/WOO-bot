@@ -5,6 +5,7 @@ from sqlite3 import Connection
 
 from disnake.user import _UserTag
 from disnake import Role
+from disnake import ui
 
 from ..library import deps, logging
 from .game_objects import RoleIncome
@@ -77,6 +78,43 @@ class NewUser(_UserTag):
     def get_inventory(self):
         deps.main_db.autocreate_user(self.id)
         return deps._UserInventory(self.id)
+    
+    def get_v2balance(self):
+        balance = self.get_balance()[deps.MAIN_CURRENCY_ID]
+        return [
+            ui.Container(
+                ui.TextDisplay(
+                    '# Баланс пользователя <@' + str(self.id) + '>'
+                ),
+                ui.Separator(),
+                ui.Separator(),
+                ui.Section(
+                    ui.TextDisplay(
+                        '🔷 В казне: ' + str(balance.amount)
+                    ),
+                    accessory=ui.Button(
+                        label='Пополнить',
+                        emoji='🔁',
+                        custom_id=f'balance_withdraw {self.id}'
+                    )
+                ),
+                ui.Separator(),
+                ui.Section(
+                    ui.TextDisplay(
+                        '🔶 За рубежом: 0'
+                    ),
+                    accessory=ui.Button(
+                        label='Перевести',
+                        emoji='🏦',
+                        custom_id=f'balance_deposit {self.id}'
+                    )
+                ),
+                ui.Separator(),
+                ui.TextDisplay(
+                    '💠 Всего: ' + str(balance.amount)
+                )
+            )
+        ]
 
 
 class NewRole(Role):
