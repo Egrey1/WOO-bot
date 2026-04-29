@@ -90,7 +90,7 @@ class NewUser(_UserTag):
                 ui.Separator(),
                 ui.Section(
                     ui.TextDisplay(
-                        '🔷 В казне: ' + str(balance.amount)
+                        '🔷 **В казне: ' + deps.bamount(balance.amount) + '**'
                     ),
                     accessory=ui.Button(
                         label='Пополнить',
@@ -101,7 +101,7 @@ class NewUser(_UserTag):
                 ui.Separator(),
                 ui.Section(
                     ui.TextDisplay(
-                        '🔶 За рубежом: 0'
+                        '🔶 **За рубежом: ' + deps.bamount(0) + '**'
                     ),
                     accessory=ui.Button(
                         label='Перевести',
@@ -111,7 +111,7 @@ class NewUser(_UserTag):
                 ),
                 ui.Separator(),
                 ui.TextDisplay(
-                    '💠 Всего: ' + str(balance.amount)
+                    '💠 **Всего: ' + deps.bamount(balance.amount) + '**'
                 )
             )
         ]

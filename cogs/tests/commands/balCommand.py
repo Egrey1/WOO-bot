@@ -2,13 +2,20 @@ from ..library import deps, command, Context, Cog, Member, MessageFlags, Message
 
 class BalCommand(Cog):
     class EditBalance(Modal):
-        def __init__(self, user: Member, name: str, withdraw: bool = False, deposit: bool = False):
+        def __init__(self, user: Member, name: str, withdraw: bool = False, deposit: bool = False, moderator_mode: bool = False):
             self.withdraw = withdraw
             self.deposit = deposit
             self.user = user
             balance = user.get_balance()[deps.MAIN_CURRENCY_ID]
-            bank = 0
-            a = TextInput(label=name, custom_id='balance', placeholder=str(balance.amount) if deposit else str(bank), value= str(balance.amount) if deposit else str(bank))
+            self.moneys = balance.amount or 0
+            self.bank = 0
+            self.moderator_mode = moderator_mode
+            a = TextInput(
+                label=name, 
+                custom_id='balance', 
+                placeholder=(str(balance.amount) if deposit else str(self.bank)) if not moderator_mode else 'Вы настраиваете чужой баланс', 
+                value= (str(balance.amount) if deposit else str(self.bank)) if not moderator_mode else None
+            )
             super().__init__(title='Редактирование баланса', components=[a])
         
         async def callback(self, interaction: ModalInteraction):
@@ -16,17 +23,21 @@ class BalCommand(Cog):
             try:
                 if value != 'all':
                     value = value.replace(',', '')
-                    value = int(value.split('e')[0]) * (10 ** int(value.split('e')[1]))
+                    value = int(value.split('e')[0]) * (10 ** int(value.split('e')[1])) if 'e' in value else int(value)
                     if self.withdraw:
-                        pass
+                        if self.moderator_mode:
+                            value = self.moneys if value < -self.moneys else value
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] += value
                     elif self.deposit:
                         pass
                 else:
                     if self.withdraw:
-                        pass
+                        if self.moderator_mode:
+                            value = -self.moneys
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] += value
                     elif self.deposit:
                         pass
-                await interaction.edit_original_message(components=self.user.get_v2balance(), flags=MessageFlags(is_components_v2=True)) # type: ignore
+                await interaction.message.edit(components=self.user.get_v2balance(), flags=MessageFlags(is_components_v2=True)) # type: ignore
             except:
                 await interaction.response.send_message('Неверное значение', ephemeral=True)
 
@@ -47,12 +58,21 @@ class BalCommand(Cog):
         
         if 'withdraw' in custom_id:
             if custom_id.split()[1] != str(interaction.user.id):
-                await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
-                return
-            await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
+                if not interaction.user.guild_permissions.administrator: # type: ignore
+                    await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
+                    return
+                modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True, moderator_mode=True) # type: ignore
+                await interaction.response.send_modal(modal)
+            modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True) # type: ignore
+            await interaction.response.send_modal(modal)
+            # await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
 
         elif 'deposit' in custom_id:
             if custom_id.split()[1] != str(interaction.user.id):
-                await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
-                return
-            await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
+                if not interaction.user.guild_permissions.administrator: # type: ignore
+                    await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
+                    return
+                modal = self.EditBalance(interaction.user, 'Сумма', deposit=True, moderator_mode=True) # type: ignore
+                await interaction.response.send_modal(modal)
+            modal = self.EditBalance(interaction.user, 'Сумма', deposit=True) # type: ignore
+            await interaction.response.send_modal(modal)

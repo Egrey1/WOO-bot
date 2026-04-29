@@ -24,12 +24,12 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.14 Изменение интерфейса команды !bal, облегчение создания предметов' 
+    deps.VERSION = '2.15 Исправление !bal и !top. Автообновление бота' 
     
-    deps.rights = sql.connect('databases2/rights.db', check_same_thread=False)
+    deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
     deps.rights.execute('PRAGMA foreign_keys = ON')
-    deps.main_db = cls.NewConnection('databases2/main.db', check_same_thread=False)
+    deps.main_db = cls.NewConnection('data/main.db', check_same_thread=False)
     deps.main_db.row_factory = sql.Row
     deps.main_db.execute('PRAGMA foreign_keys = ON')
     deps.MAIN_GUILD_ID = 1365405287007125666 if not deps.test_mode else 1051925846170030172

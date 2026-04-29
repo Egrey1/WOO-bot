@@ -741,7 +741,7 @@ class ShopItem(_BaseEntity):
         params: tuple[object, ...] = ()
         if active_only:
             query += "WHERE is_active = 1 "
-        query += "ORDER BY id"
+        query += "ORDER BY cost_amount"
         rows = cls._fetch_all(query, params)
         return [cls(row['id']) for row in rows]
 
