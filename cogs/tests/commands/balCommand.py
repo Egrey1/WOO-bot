@@ -61,18 +61,21 @@ class BalCommand(Cog):
                 if not interaction.user.guild_permissions.administrator: # type: ignore
                     await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
                     return
-                modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True, moderator_mode=True) # type: ignore
-                await interaction.response.send_modal(modal)
-            modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True) # type: ignore
-            await interaction.response.send_modal(modal)
-            # await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
+                await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
+                # modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True, moderator_mode=True) # type: ignore
+                # await interaction.response.send_modal(modal)
+            # modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True) # type: ignore
+            # await interaction.response.send_modal(modal)
+            await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
 
         elif 'deposit' in custom_id:
             if custom_id.split()[1] != str(interaction.user.id):
                 if not interaction.user.guild_permissions.administrator: # type: ignore
                     await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
                     return
-                modal = self.EditBalance(interaction.user, 'Сумма', deposit=True, moderator_mode=True) # type: ignore
-                await interaction.response.send_modal(modal)
-            modal = self.EditBalance(interaction.user, 'Сумма', deposit=True) # type: ignore
-            await interaction.response.send_modal(modal)
+                await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
+                # modal = self.EditBalance(interaction.user, 'Сумма', deposit=True, moderator_mode=True) # type: ignore
+                # await interaction.response.send_modal(modal)
+            # modal = self.EditBalance(interaction.user, 'Сумма', deposit=True) # type: ignore
+            # await interaction.response.send_modal(modal)
+            await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
