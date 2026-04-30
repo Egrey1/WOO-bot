@@ -961,9 +961,19 @@ class ShopItem(_BaseEntity):
                             disabled= not self.is_active
                         )
                     ),
-                    ui.TextDisplay(
-                        f'Требуемая роль: <@&{self.required_role_id}>' if self.required_role_id is not None else 'Требуемая роль: Нет'
-                    )
+                    ui.Section(
+                        ui.TextDisplay(
+                            f'Требуемая роль: <@&{self.required_role_id}>' if self.required_role_id is not None else 'Требуемая роль: Нет'
+                        ),
+                        accessory=ui.Button(
+                            label='Удалить',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'item_delete_role {self.id}',
+                            emoji='⚙️',
+                            disabled= not self.required_role_id
+                        )
+                    ),
+                    
                 ),
                 ui.ActionRow(
                     ui.Button(

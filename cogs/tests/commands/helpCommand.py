@@ -4,6 +4,7 @@ class HelpCommand(Cog):
     @command('help')
     async def help(self, ctx: Context, name: str | None = None):
         await asyncio.sleep(1)
+        de = None
         if name == 'tags':
             components = [
                 Container(
@@ -36,23 +37,39 @@ class HelpCommand(Cog):
                 )
             ]
         elif name in ('duck', 'ducks'):
-            components = [
-                Container(
-                    TextDisplay('# Справка по уткам'),
-                    Separator(),
-                    Separator(),
-                    TextDisplay('Они хорошенькие и добренькие'),
-                    Separator(),
-                    TextDisplay('Они любят всех'),
-                    Separator(),
-                    TextDisplay('Они прыгают от счастья когда их кормят'),
-                    Separator(),
-                    TextDisplay('Они создают бота для сервера Starlight RP, Егрею только ничего не говорите'),
-                    Separator(),
-                    TextDisplay('-# Мне нужна поддержка`.` `.` `.`'),
-                    Separator(),
-                )
-            ]
+            if ctx.author.id == 1:
+                components = [
+                        Container(
+                            TextDisplay('# Справка по уткам'),
+                            Separator(),
+                            Separator(),
+                            TextDisplay('Они хорошенькие и добренькие'),
+                            Separator(),
+                            TextDisplay('Они любят всех'),
+                            Separator(),
+                            TextDisplay('Они прыгают от счастья когда их кормят'),
+                            Separator()
+                        )
+                    ]
+            else:
+                de = 7.0
+                components = [
+                    Container(
+                        TextDisplay('# Справка по уткам'),
+                        Separator(),
+                        Separator(),
+                        TextDisplay('Они хорошенькие и добренькие'),
+                        Separator(),
+                        TextDisplay('Они любят всех'),
+                        Separator(),
+                        TextDisplay('Они прыгают от счастья когда их кормят'),
+                        Separator(),
+                        TextDisplay('Они создают бота для сервера Starlight RP, Егрею только ничего не говорите'),
+                        Separator(),
+                        TextDisplay('-# Мне нужна поддержка`.` `.` `.`'),
+                        Separator(),
+                    )
+                ]
         else:
             components = [
                 Container(
@@ -88,4 +105,4 @@ class HelpCommand(Cog):
                     TextDisplay('-# ' + deps.VERSION)
                 )
             ]
-        await ctx.send(components=components, flags=MessageFlags(is_components_v2=True))
+        await ctx.send(components=components, flags=MessageFlags(is_components_v2=True), delete_after=de) # type: ignore

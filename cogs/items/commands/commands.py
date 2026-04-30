@@ -295,6 +295,29 @@ class ItemCommands(Cog):
             # await interaction.response.defer(with_message=False)
             return
 
+        if 'delete_role' in option:
+            await interaction.response.defer(with_message=False)
+            item = deps.ShopItem(custom_id.split()[1])
+            components = [
+                ActionRow(
+                    Button(
+                        label='Завершить создание',
+                        style=ButtonStyle.green,
+                        custom_id=f'item_create_complete {item.id}',
+                        emoji='✅'
+                    ),
+                    Button(
+                        label='Отменить создание',
+                        style=ButtonStyle.red,
+                        custom_id=f'item_delete  {item.id}',
+                        emoji='❎'
+                    )
+                )
+            ]
+            item.edit(required_role=-1)
+            components = item.get_v2component(True) + ((components) if item.id in self.creates else [])
+            await interaction.message.edit(components=components, flags=MessageFlags(is_components_v2=True)) # type: ignore
+
         if 'item_edit' in option:
             item = deps.ShopItem(custom_id.split()[1])
             components = [
@@ -388,13 +411,30 @@ class ItemCommands(Cog):
             return
         
         if 'item_edit' in custom_id:
+            item = deps.ShopItem(custom_id.split()[1])
+            components = [
+                ActionRow(
+                    Button(
+                        label='Завершить создание',
+                        style=ButtonStyle.green,
+                        custom_id=f'item_create_complete {item.id}',
+                        emoji='✅'
+                    ),
+                    Button(
+                        label='Отменить создание',
+                        style=ButtonStyle.red,
+                        custom_id=f'item_delete  {item.id}',
+                        emoji='❎'
+                    )
+                )
+            ]
             if 'role' in custom_id:
                 await interaction.response.defer(with_message=False)
                 value: Role = interaction.resolved_values[0]  # type: ignore
-                item = deps.ShopItem(custom_id.split()[1])
                 item.edit(required_role=value)
+                components = item.get_v2component(True) + ((components) if item.id in self.creates else [])
                 await interaction.message.edit(
-                    components=item.get_v2component(True), # type: ignore
+                    components=components, # type: ignore
                     flags=MessageFlags(is_components_v2=True)
                 )
 
