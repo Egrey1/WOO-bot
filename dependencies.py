@@ -1,7 +1,7 @@
 from sqlite3 import Connection
-from disnake.ext.commands import Bot
-from disnake import Component, Embed, Guild, Intents, Member, Role, User
-from typing import List, Tuple
+from disnake.ext.commands import Bot, Context
+from disnake import Component, Embed, Guild, Intents, Member, Role, User, Message
+from typing import List, Tuple, Callable, Any, Awaitable
 import datetime as dt
 from disnake.ui import Components, ActionRow
 
@@ -229,6 +229,48 @@ main_db: Connection
     - Для корректной работы связей в SQLite желательно включать
       `PRAGMA foreign_keys = ON`.
 """
+
+class Search:
+    def __init__(self, label: str, items: dict[str, Any], member_id: int, complete_handler: 'EventHandler | None' = None, error_handler: 'EventHandler | None' = None) :
+        """
+        Создание объекта поиска
+
+        Params:
+            label (str): **Оглавление списка предметов для поиска**
+            items (dict[str, Any]): **Словарь предметов для поиска. Ключ это название предмета, значение - сам предмет**
+            member_id (int): **ID пользователя, который ищет предметы**
+            complete_handler: **Обработчик события, когда поиск завершается удачно. В качестве аргумента обработчик принимает объект типа Message и сам найденный предмет**
+            error_handler: **Обработчик события, когда поиск завершается неудачно. В качестве аргумента обработчик принимает объект типа Message и Embed**
+        """
+    
+    async def send_label(self, ctx: Context):
+        """
+        Отправить окно с предметами
+
+        Params:
+            ctx (Context): **Контекст сообщения**
+        """
+    
+    async def on_message_handler(self, message: Message):
+        """
+        Вся проверка и суть поиска. Вызывать строго в обработчике сообщений on_message
+        """
+
+class EventHandler:
+    def __init__(self, *, event: Callable[..., Any] | None = None, coro_event: Callable[..., Awaitable[Any]] | None = None):
+        """
+        Создание обработчика событий
+
+        Params:
+            event (Callable[..., Any]): **Обычная функция**
+            coro_event (Callable[..., Awaitable[Any]]): **Асинхронная функция**
+        """
+    
+    def InvokeHandler(self, *args, **kwargs):
+        """
+        Обработка сработавшего события. В качестве аргументов принимает аргументы функций обработчиков
+        """
+
 
 class Rights:
     """

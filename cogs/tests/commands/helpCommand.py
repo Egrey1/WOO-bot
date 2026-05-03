@@ -66,8 +66,6 @@ class HelpCommand(Cog):
                         Separator(),
                         TextDisplay('Они создают бота для сервера Starlight RP, Егрею только ничего не говорите'),
                         Separator(),
-                        TextDisplay('-# Мне нужна поддержка`.` `.` `.`'),
-                        Separator(),
                     )
                 ]
         else:

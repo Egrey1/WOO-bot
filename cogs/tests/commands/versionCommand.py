@@ -7,6 +7,6 @@ class VersionCommand(Cog):
         import random
         import logging
         await ctx.send(f'Версия бота: {deps.VERSION}')
-        if random.randint(0, 100) <= 25:
+        if random.randint(0, 100) <= 45:
             await ctx.send('25`.`', delete_after=3)
             logging.info('Сработало случайное событие для ' + ctx.author.name)

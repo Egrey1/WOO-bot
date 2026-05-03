@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.16 Исправление изменения ролей' 
+    deps.VERSION = '2.17 Добавление команды !use. Улучшение структуры бота' 
     
     deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
@@ -44,6 +44,8 @@ def first_config():
     deps._UserBalance = cls._UserBalance
     deps._UserResources = cls._UserResources
     deps._UserInventory = cls._UserInventory
+    deps.EventHandler = cls.EventHandler
+    deps.Search = cls.Search
 
 
     ds.Role.get_role_information = cls.NewRole.get_role_information # type: ignore

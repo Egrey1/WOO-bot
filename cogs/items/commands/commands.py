@@ -109,7 +109,8 @@ class ItemCommands(Cog):
             
             interaction.user.get_balance()[deps.MAIN_CURRENCY_ID] -= count * self.item.cost_amount
             inventory = interaction.user.get_inventory()
-            inventory[self.item.id] = inventory.get(self.item.id, 0) + count
+            current_count = inventory[self.item.id].amount if self.item.id in inventory else 0
+            inventory[self.item.id] = current_count + count
             
             await interaction.response.send_message(f'Вы успешно приобрели {int(count)} {self.item.name}', ephemeral=True) 
 
