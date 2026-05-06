@@ -56,7 +56,7 @@ class RolesCommands(Cog):
                     self.roleincome.remove_tag('percentageI')
                     self.roleincome.remove_tag('ignorecooldown')
                 else:
-                    self.roleincome.edit(currency_amount=int(value[:-1]) * a)
+                    self.roleincome.edit(currency_amount=float(value[:-1]) * a)
                     self.roleincome.add_tag('percentageI')
                     self.roleincome.add_tag('ignorecooldown')
             
@@ -74,10 +74,10 @@ class RolesCommands(Cog):
                 self.roleincome.remove_tag(value)
 
             components = self.roleincome.get_v2component(True) + self.lists
-            await interaction.response.defer(with_message=False)
             await interaction.message.edit( # type: ignore
                 components= components,  # type: ignore
                 flags=MessageFlags(is_components_v2=True)) 
+            await interaction.response.defer(with_message=False)
 
 
     

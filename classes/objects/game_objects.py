@@ -171,11 +171,14 @@ def _migrate_user_balances_table(connection: sql_Connection) -> None:
         return
 
     create_sql = str(row['sql'] or '').replace('"', '').replace(' ', '').lower()
-    if 'amountintegernotnulldefault0check(amount>=0)' not in create_sql:
+    should_migrate = 'bank' not in create_sql or 'check(amount>=0)' in create_sql
+    if not should_migrate:
         return
 
     cursor = connection.cursor()
     cursor.execute('PRAGMA foreign_keys = OFF')
+    cursor.execute("PRAGMA table_info(user_balances)")
+    existing_columns = {str(column['name']) for column in cursor.fetchall()}
     cursor.execute(
         """
         CREATE TABLE user_balances__new (
@@ -183,6 +186,7 @@ def _migrate_user_balances_table(connection: sql_Connection) -> None:
             user_id INTEGER NOT NULL,
             currency_id INTEGER NOT NULL,
             amount INTEGER NOT NULL DEFAULT 0,
+            bank INTEGER NOT NULL DEFAULT 0,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (currency_id) REFERENCES currencies(id) ON DELETE CASCADE,
@@ -190,13 +194,15 @@ def _migrate_user_balances_table(connection: sql_Connection) -> None:
         )
         """
     )
+    bank_select = "bank" if 'bank' in existing_columns else "0"
     cursor.execute(
-        """
+        f"""
         INSERT INTO user_balances__new (
             id,
             user_id,
             currency_id,
             amount,
+            bank,
             updated_at
         )
         SELECT
@@ -204,6 +210,7 @@ def _migrate_user_balances_table(connection: sql_Connection) -> None:
             user_id,
             currency_id,
             amount,
+            {bank_select},
             updated_at
         FROM user_balances
         """
@@ -429,6 +436,7 @@ class Currency(_BaseEntity):
         self.created_at = str(row['created_at'])
         self.updated_at = str(row['updated_at'])
         self.amount: int | float | None = None
+        self.bank: int | None = None
 
     def __int__(self) -> int:
         return 0 if self.amount is None else int(float(self.amount))
@@ -442,6 +450,7 @@ class Currency(_BaseEntity):
     def _with_amount(self, amount: int | float) -> 'Currency':
         currency = Currency(self.id)
         currency.amount = _normalize_number(amount)
+        currency.bank = self.bank
         return currency
 
     def __iadd__(self, value: int | float) -> 'Currency':
@@ -1654,14 +1663,65 @@ class _UserBalance(_UserEntityMap):
     table_name = 'user_balances'
     key_column = 'currency_id'
 
-    def _make_value(self, key: int, amount: int | float) -> Currency:
+    def _reload(self) -> None:
+        rows = _BaseEntity._fetch_all(
+            """
+            SELECT currency_id, amount, bank
+            FROM user_balances
+            WHERE user_id = ?
+            ORDER BY currency_id
+            """,
+            (self.id,),
+        )
+        super().clear()
+        for row in rows:
+            key = int(row['currency_id'])
+            amount = _normalize_number(row['amount'])
+            bank = int(row['bank'])
+            super().__setitem__(key, self._make_value(key, amount, bank))
+
+    def _make_value(self, key: int, amount: int | float, bank: int = 0) -> Currency:
         currency = Currency(key)
         currency.amount = amount
+        currency.bank = int(bank)
         return currency
 
     def _normalize_value(self, value: Currency | int | float) -> int:
         raw_value = value.amount if isinstance(value, Currency) and value.amount is not None else value
         return _truncate_number(raw_value) # type: ignore
+
+    def __setitem__(self, key: int | str, value: Currency | int | float) -> None:
+        normalized_key = int(key)
+        normalized_amount = self._normalize_value(value)
+
+        if isinstance(value, Currency) and value.bank is not None:
+            bank = int(value.bank)
+        elif normalized_key in self:
+            try:
+                bank = int(self[normalized_key].bank or 0) # type: ignore
+            except:
+                bank = 0
+        else:
+            bank = 0
+
+        with _require_connection() as connect:
+            cursor = connect.cursor()
+            cursor.execute(
+                """
+                INSERT INTO user_balances (user_id, currency_id, amount, bank)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(user_id, currency_id)
+                DO UPDATE SET
+                    amount = excluded.amount,
+                    bank = excluded.bank,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (self.id, normalized_key, normalized_amount, bank),
+            )
+            connect.commit()
+            cursor.close()
+
+        super().__setitem__(normalized_key, self._make_value(normalized_key, normalized_amount, bank))
 
     def get_objects(self) -> list[Currency]:
         """"""

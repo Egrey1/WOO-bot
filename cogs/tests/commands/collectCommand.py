@@ -60,8 +60,8 @@ class CollectCommand(Cog):
 
                 if roleincome.currency_id:
                     user_balance[roleincome.currency_id] += (roleincome.currency_amount or 0) * percentage_income
-                    income_balance[role.mention] = deps.bamount(roleincome.currency_amount) + ((' - ' + deps.bamount(100 - percentage_income * 100) + '% -> ' + deps.bamount(roleincome.currency_amount * percentage_income)) if int(percentage_income) != 1 else '') # type: ignore
-                    sums += (roleincome.currency_amount or 0) * percentage_income
+                    income_balance[role.mention] = deps.bamount(roleincome.currency_amount) + ((' - ' + deps.bamount(100 - percentage_income * 100) + '% -> ' + deps.bamount(int(roleincome.currency_amount * percentage_income))) if int(percentage_income) != 1 else '') # type: ignore
+                    sums += int((roleincome.currency_amount or 0) * percentage_income)
                 
                 for resource, amount in roleincome.resources:
                     user_resources[resource.id] += amount
@@ -77,7 +77,9 @@ class CollectCommand(Cog):
         if income_balance or income_resource:
             desc = (f'{deps.bamount(user_balance[deps.MAIN_CURRENCY_ID].amount or 0)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
                     (f' <- ' + ('(' if perc_salary_minus else '') + str(old) + ' ' + ((
-                        deps.bamount(-perc_minus, True) + ' ') if perc_minus else '')+ str(sums) + (
+                        deps.bamount(int(-perc_minus), True) + ' ') if perc_minus else '') + (
+                            ('+ ' if int(sums) >= 0 else '- ') + str(int((int(sums) ** 2) ** 0.5))
+                            ) + (
                             ')' + deps.bamount(-perc_salary_minus, True) if perc_salary_minus else ''
                             ) + '\n\n' if sums != 0 else '') + 
                             ('\n'.join(f'{k}: {v}' for k, v in income_balance.items()) + 

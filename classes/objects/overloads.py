@@ -27,8 +27,8 @@ class NewConnection(Connection):
 
         cursor.execute(
             """
-            INSERT OR IGNORE INTO user_balances (user_id, currency_id, amount)
-            SELECT ?, id, 0
+            INSERT OR IGNORE INTO user_balances (user_id, currency_id, amount, bank)
+            SELECT ?, id, 0, 0
             FROM currencies
             """,
             (user_id,),
@@ -101,7 +101,7 @@ class NewUser(_UserTag):
                 ui.Separator(),
                 ui.Section(
                     ui.TextDisplay(
-                        '🔶 **За рубежом: ' + deps.bamount(0) + '**'
+                        '🔶 **За рубежом: ' + deps.bamount(balance.bank) + '**'
                     ),
                     accessory=ui.Button(
                         label='Перевести',

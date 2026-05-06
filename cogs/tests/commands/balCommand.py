@@ -1,3 +1,5 @@
+from re import S
+
 from ..library import deps, command, Context, Cog, Member, MessageFlags, MessageInteraction, Modal, TextInput, ModalInteraction
 
 class BalCommand(Cog):
@@ -6,15 +8,14 @@ class BalCommand(Cog):
             self.withdraw = withdraw
             self.deposit = deposit
             self.user = user
-            balance = user.get_balance()[deps.MAIN_CURRENCY_ID]
-            self.moneys = balance.amount or 0
-            self.bank = 0
+            self.balance = user.get_balance()[deps.MAIN_CURRENCY_ID]
+            self.moneys = self.balance.amount or 0
             self.moderator_mode = moderator_mode
             a = TextInput(
                 label=name, 
                 custom_id='balance', 
-                placeholder=(str(balance.amount) if deposit else str(self.bank)) if not moderator_mode else 'Вы настраиваете чужой баланс', 
-                value= (str(balance.amount) if deposit else str(self.bank)) if not moderator_mode else None
+                placeholder=(str(self.balance.amount) if deposit else str(self.balance.bank)) if not moderator_mode else 'Вы настраиваете чужой баланс', 
+                value= (str(self.balance.amount) if deposit else str(self.balance.bank)) if not moderator_mode else None
             )
             super().__init__(title='Редактирование баланса', components=[a])
         
@@ -23,23 +24,53 @@ class BalCommand(Cog):
             try:
                 if value != 'all':
                     value = value.replace(',', '')
-                    value = int(value.split('e')[0]) * (10 ** int(value.split('e')[1])) if 'e' in value else int(value)
+                    value = int(int(value.split('e')[0]) * (10 ** int(value.split('e')[1])) if 'e' in value else int(value))
+                    value = int((value ** 2) ** 0.5)
                     if self.withdraw:
                         if self.moderator_mode:
                             value = self.moneys if value < -self.moneys else value
                             self.user.get_balance()[deps.MAIN_CURRENCY_ID] += value
+                        else:
+                            value = min(value, self.balance.amount or 0) if value > 0 else max(value, self.balance.amount or 0)
+                            self.balance += value
+                            self.balance.bank = int((self.balance.bank or 0) - value )
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] = self.balance
+
                     elif self.deposit:
-                        pass
+                        if self.moderator_mode:
+                            self.balance.bank = (self.balance.bank or 0) + value
+                            self.balance.bank = max(0, self.balance.bank)
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] = self.balance
+                        else:
+                            value = min(value, self.balance.amount or 0) if value > 0 else max(value, self.balance.amount or 0)
+                            self.balance -= value
+                            self.balance.bank = (self.balance.bank or 0) + int(value)
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] = self.balance
+
                 else:
                     if self.withdraw:
                         if self.moderator_mode:
-                            value = -self.moneys
-                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] += value
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] = 0
+                        else:
+                            value = self.balance.bank or 0
+                            self.balance += value
+                            self.balance.bank = 0
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] = self.balance 
                     elif self.deposit:
-                        pass
+                        if self.moderator_mode:
+                            self.balance.bank = 0
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] = self.balance
+                        else:
+                            value = self.balance.amount or 0
+                            self.balance.bank = (self.balance.bank or 0) + value # type: ignore
+                            self.balance.amount = 0
+                            self.user.get_balance()[deps.MAIN_CURRENCY_ID] = self.balance
+
                 await interaction.message.edit(components=self.user.get_v2balance(), flags=MessageFlags(is_components_v2=True)) # type: ignore
             except:
                 await interaction.response.send_message('Неверное значение', ephemeral=True)
+            
+            await interaction.response.defer(with_message=False)
 
 
 
@@ -62,8 +93,8 @@ class BalCommand(Cog):
                     await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
                     return
                 await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
-                # modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True, moderator_mode=True) # type: ignore
-                # await interaction.response.send_modal(modal)
+            #     modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True, moderator_mode=True) # type: ignore
+            #     await interaction.response.send_modal(modal)
             # modal = self.EditBalance(interaction.user, 'Сумма', withdraw=True) # type: ignore
             # await interaction.response.send_modal(modal)
             await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
@@ -74,8 +105,8 @@ class BalCommand(Cog):
                     await interaction.response.send_message('Вы не имеете права управлять чужим балансом', ephemeral=True)
                     return
                 await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
-                # modal = self.EditBalance(interaction.user, 'Сумма', deposit=True, moderator_mode=True) # type: ignore
-                # await interaction.response.send_modal(modal)
+            #     modal = self.EditBalance(interaction.user, 'Сумма', deposit=True, moderator_mode=True) # type: ignore
+            #     await interaction.response.send_modal(modal)
             # modal = self.EditBalance(interaction.user, 'Сумма', deposit=True) # type: ignore
             # await interaction.response.send_modal(modal)
             await interaction.response.send_message('Это заглушка к грядущему обновлению', ephemeral=True)
