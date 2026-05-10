@@ -58,6 +58,8 @@ class InvCommand(Cog):
             await interaction.response.send_message('Это не ваше интерактивное окно', ephemeral=True)
             return
         
+        await interaction.response.defer(with_message=False)
+        
         embed = Embed(title=f'Инвентарь пользователя <@{author_id}>')
         self.current_page[author_id] += 1
         for item in self.normal_inv[author_id][
@@ -95,6 +97,7 @@ class InvCommand(Cog):
         if member_id != interaction.author.id:
             await interaction.response.send_message('Это не ваше интерактивное окно', ephemeral=True)
             return
+        await interaction.response.defer(with_message=False)
         
         embed = Embed(title=f'Инвентарь пользователя <@{author_id}>')
         self.current_page[author_id] -= 1

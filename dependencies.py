@@ -242,8 +242,8 @@ class Search:
             label (str): **Оглавление списка предметов для поиска**
             items (dict[str, Any]): **Словарь предметов для поиска. Ключ это название предмета, значение - сам предмет**
             member_id (int): **ID пользователя, который ищет предметы**
-            complete_handler: **Обработчик события, когда поиск завершается удачно. В качестве аргумента обработчик принимает объект типа Message и сам найденный предмет**
-            error_handler: **Обработчик события, когда поиск завершается неудачно. В качестве аргумента обработчик принимает объект типа Message и Embed**
+            complete_handler: **Обработчик события, когда поиск завершается удачно. В качестве аргумента обработчик принимает объект типа Message, выбранный предмет и ID участника**
+            error_handler: **Обработчик события, когда поиск завершается неудачно. В качестве аргумента обработчик принимает объект типа Message, Embed и int. Сообщение, к которому привязана ошибка, его описание и ID участника**
         """
     
     async def send_label(self, ctx: Context):
@@ -260,6 +260,8 @@ class Search:
         """
 
 class EventHandler:
+    events: List[Callable[..., Any]] | None = None
+    coro_events: List[Callable[..., Awaitable[Any]]] | None = None
     def __init__(self, *, event: Callable[..., Any] | None = None, coro_event: Callable[..., Awaitable[Any]] | None = None):
         """
         Создание обработчика событий

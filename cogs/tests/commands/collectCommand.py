@@ -69,16 +69,16 @@ class CollectCommand(Cog):
                     resources_sums[resource.id] = resources_sums.get(resource.id, 0) + amount
                 roleincome.set_last_claim_at(ctx.author.id, now)
         old = deps.bamount(old)
-        sums = deps.bamount(sums)
+        sums = sums
         perc_salary_minus = int(user_balance[deps.MAIN_CURRENCY_ID])
         user_balance[deps.MAIN_CURRENCY_ID] = int((user_balance[deps.MAIN_CURRENCY_ID].amount or 0) * percentage_balance_after)
         perc_salary_minus = perc_salary_minus - int(user_balance[deps.MAIN_CURRENCY_ID])
 
         if income_balance or income_resource:
             desc = (f'{deps.bamount(user_balance[deps.MAIN_CURRENCY_ID].amount or 0)}{deps.Currency(deps.MAIN_CURRENCY_ID).symbol}' + 
-                    (f' <- ' + ('(' if perc_salary_minus else '') + str(old) + ' ' + ((
+                    (f' <- ' + ('(' if perc_salary_minus else '') + old + ' ' + ((
                         deps.bamount(int(-perc_minus), True) + ' ') if perc_minus else '') + (
-                            ('+ ' if int(sums) >= 0 else '- ') + str(int((int(sums) ** 2) ** 0.5))
+                            ('+ ' if sums >= 0 else '- ') + deps.bamount(int((sums ** 2) ** 0.5))
                             ) + (
                             ')' + deps.bamount(-perc_salary_minus, True) if perc_salary_minus else ''
                             ) + '\n\n' if sums != 0 else '') + 

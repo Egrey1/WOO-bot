@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.18 Улучшение структуры бота. Небольшое видоизменение !collect. Возможность использовать дробные значения в RoleIncome' 
+    deps.VERSION = '2.19 Я даже не знаю что я сделал, слишком мелкое обновление. Исправил нажатие кнопок в !inv и отображение стоимости в !iteminfo' 
     
     deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row

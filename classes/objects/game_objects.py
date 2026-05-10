@@ -924,7 +924,7 @@ class ShopItem(_BaseEntity):
                     ui.Separator(),
                     ui.TextDisplay(self.description),
                     ui.Section(
-                        ui.TextDisplay(f'Стоимость {self.cost_amount}{self.currency.symbol}'),
+                        ui.TextDisplay(f'Стоимость {deps.bamount(self.cost_amount)}{self.currency.symbol}'),
                         accessory=ui.Button(
                             label='Купить', 
                             style=ButtonStyle.green, 
@@ -1012,7 +1012,7 @@ class ShopItem(_BaseEntity):
             ui.Separator(),
             ui.TextDisplay(self.description if len(self.description[:256] + '...') <= 256 else self.description[:253] + '...'),
             ui.Section(
-                ui.TextDisplay(f'Стоимость {self.cost_amount}{self.currency.symbol}'),
+                ui.TextDisplay(f'Стоимость {deps.bamount(self.cost_amount)}{self.currency.symbol}'),
                 accessory=ui.Button(
                     label='Купить', 
                     style=ButtonStyle.green, 

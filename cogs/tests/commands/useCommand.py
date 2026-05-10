@@ -3,8 +3,8 @@ from ..library import Cog, command, Context, deps, Embed, Colour, Message
 class UseCommand(Cog):
     searches: dict[int, tuple[deps.Search, int]] = {}
 
-    async def use_command(self, message_or_ctx: Message | Context, item: deps.ShopItem, amount: int | None = None):
-        amount = amount or self.searches[message_or_ctx.author.id][1]
+    async def use_command(self, message_or_ctx: Message | Context, item: deps.ShopItem, member_id: int, amount: int | None = None):
+        amount = amount or self.searches[member_id][1]
         amount = int((amount ** 2) ** 0.5)
         inventory = message_or_ctx.author.get_inventory()
         count = inventory.get(item.id, 0)
@@ -23,12 +23,12 @@ class UseCommand(Cog):
             description=f'Вы успешно использовали {amount} {item.name}',
             colour=Colour.green()
         ))
-        if message_or_ctx.author.id in self.searches:
-            self.searches.pop(message_or_ctx.author.id)
+        if member_id in self.searches:
+            self.searches.pop(member_id)
     
-    async def use_error(self, message: Message, embed: Embed):
+    async def use_error(self, message: Message, embed: Embed, member_id: int):
         await message.reply(embed=embed)
-        self.searches.pop(message.author.id)
+        self.searches.pop(member_id)
 
 
 
@@ -46,7 +46,7 @@ class UseCommand(Cog):
             ))
             return
         elif len(items) == 1:
-            await self.use_command(ctx, items[0], amount)
+            await self.use_command(ctx, items[0], ctx.author.id, amount)
         
         else:
             use = deps.EventHandler(coro_event=self.use_command)
