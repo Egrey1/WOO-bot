@@ -50,6 +50,10 @@ class ItemCommands(Cog):
                 if not value:
                     await interaction.response.send_message('Отмена, ожидалось название', ephemeral=True)
                     return
+                for item in deps.ShopItem.all():
+                    if item.name == value:
+                        await interaction.response.send_message('Отмена, предмет с таким названием уже существует', ephemeral=True)
+                        return
                 self.item.edit(name=value)
             elif self.desc:
                 value = value.strip()  # type: ignore

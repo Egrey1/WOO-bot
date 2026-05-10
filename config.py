@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.19 Я даже не знаю что я сделал, слишком мелкое обновление. Исправил нажатие кнопок в !inv и отображение стоимости в !iteminfo' 
+    deps.VERSION = '2.20 Добавление проверки на дублирование имен игровых предметов' 
     
     deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
