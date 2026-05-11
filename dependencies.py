@@ -435,6 +435,18 @@ class Rights:
     def set_administrator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
         """Полностью заменяет поле `administrator`."""
 
+    def get_manage_roles(self) -> list[int]: # type: ignore
+        """Возвращает список ролей из поля `manage_roles`."""
+
+    def add_manage_roles(self, role_id: int) -> list[int]: # type: ignore
+        """Добавляет роль в поле `manage_roles`."""
+
+    def remove_manage_roles(self, role_id: int) -> list[int]: # type: ignore
+        """Удаляет роль из поля `manage_roles`."""
+
+    def set_manage_roles(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """Полностью заменяет поле `manage_roles`."""
+
     def is_manage_items(self, user: Member | User) -> bool: # type: ignore
         """Проверяет, имеет ли права user на управление предметами магазина"""
     
@@ -445,7 +457,10 @@ class Rights:
         """Проверяет, имеет ли права user на управление ресурсами"""
     
     def is_administrator(self, user: Member | User) -> bool: # type: ignore
-        """Проверяет, имеет ли права user на управление другими ролями"""
+        """Проверяет, имеет ли права user на управление другими правами"""
+
+    def is_manage_roles(self, user: Member) -> bool: # type: ignore
+        """Проверяет, имеет ли права user на добавление/удаление других ролей"""
 
 class Currency:
     """

@@ -46,6 +46,10 @@ class RightsControl(Cog):
             'Позволяет управлять ролями для заработка. Удалять, редактировать, добавлять'
         )
         embed2.add_field(
+            'manage_roles',
+            'Позволяет добавлять или удалять роли пользователей'
+        )
+        embed2.add_field(
             'administrator',
             'Администратору предоставляются все права а так же возможность назначать другие роли на другие области'
         )
@@ -59,8 +63,12 @@ class RightsControl(Cog):
                 await ctx.send('Теперь эта роль может управлять настройками предметов игрового магазина')
             
             elif option == 'manage_rincomes':
-                 deps.Rights().add_manage_rincomes(role.id)
-                 await ctx.send('Теперь эта роль может настраивать роли для заработка')
+                deps.Rights().add_manage_rincomes(role.id)
+                await ctx.send('Теперь эта роль может настраивать роли для заработка')
+            
+            elif option == 'manage_roles':
+                deps.Rights().add_manage_roles(role.id)
+                await ctx.send('Теперь эта роль может управлять ролями пользователей')
 
             elif option == 'administrator':
                 if ctx.author.guild_permissions.administrator: # type: ignore
@@ -81,8 +89,12 @@ class RightsControl(Cog):
                 await ctx.send('Эта роль больше не может управлять настройками предметов игрового магазина')
             
             elif option == 'manage_rincomes':
-                 deps.Rights().remove_manage_rincomes(role.id)
-                 await ctx.send('Эта роль больше может настраивать роли для заработка')
+                deps.Rights().remove_manage_rincomes(role.id)
+                await ctx.send('Эта роль больше может настраивать роли для заработка')
+
+            elif option == 'manage_roles':
+                deps.Rights().remove_manage_roles(role.id)
+                await ctx.send('Эта роль больше не может управлять ролями пользователей')
 
             elif option == 'administrator':
                 if ctx.author.guild_permissions.administrator: # type: ignore
@@ -108,6 +120,10 @@ class RightsControl(Cog):
         embed.add_field(
             'Управление ролями для заработка',
             '\n'.join([f'<@&' + str(role) + '>' for role in deps.Rights().get_manage_rincomes()] or ['Нет ролей']) 
+        )
+        embed.add_field(
+            'Управление ролями пользователей',
+            '\n'.join([f'<@&' + str(role) + '>' for role in deps.Rights().get_manage_roles()] or ['Нет ролей']) 
         )
         embed.add_field(
             'Администратор',

@@ -251,6 +251,7 @@ class Rights:
         'manage_items',
         'manage_rincomes',
         'manage_resources',
+        'manage_roles',
         'administrator',
     )
 
@@ -283,7 +284,7 @@ class Rights:
             if count == 0:
                 cursor.execute(
                     """
-                    INSERT INTO rights (manage_items, manage_rincomes, manage_resources, administrator)
+                    INSERT INTO rights (manage_items, manage_rincomes, manage_roles, manage_resources, administrator)
                     VALUES ('', '', '', '')
                     """
                 )
@@ -295,7 +296,7 @@ class Rights:
             cursor = connect.cursor()
             cursor.execute(
                 """
-                SELECT manage_items, manage_rincomes, manage_resources, administrator
+                SELECT manage_items, manage_rincomes, manage_resources, manage_roles, administrator
                 FROM rights
                 LIMIT 1
                 """
@@ -399,11 +400,26 @@ class Rights:
     def set_administrator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
         return self.set('administrator', role_ids)
 
+    def get_manage_roles(self) -> list[int]:
+        return self.get('manage_roles')
+
+    def add_manage_roles(self, role_id: int) -> list[int]:
+        return self.add('manage_roles', role_id)
+
+    def remove_manage_roles(self, role_id: int) -> list[int]:
+        return self.remove('manage_roles', role_id)
+
+    def set_manage_roles(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self.set('manage_roles', role_ids)
+
     def is_manage_items(self, user: Member) -> bool:
         return any([role.id in self.get_manage_items() for role in user.roles])
     
     def is_manage_rincomes(self, user: Member) -> bool:
         return any([role.id in self.get_manage_rincomes() for role in user.roles])
+    
+    def is_manage_roles(self, user: Member) -> bool:
+        return any([role.id in self.get_manage_roles() for role in user.roles])
     
     def is_manage_resources(self, user: Member) -> bool:
         return any([role.id in self.get_manage_resources() for role in user.roles])
