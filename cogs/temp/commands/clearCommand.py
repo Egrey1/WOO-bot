@@ -28,11 +28,12 @@ class Clear(Cog):
             try:
                 mes = await ctx.send('Ожидайте, команда в процессе выполнения')
                 counter = 0
-                async for message in ctx.channel.history(limit=250):
+                async for message in ctx.channel.history(limit=50):
                     if flag2:
                         id_ = message.id
-                        await message.delete()
-                        counter += 1
+                        if message.id != target_message_id:
+                            await message.delete()
+                            counter += 1
                         if id_ == target_message_id:
                             flag = True
                             break
@@ -42,7 +43,7 @@ class Clear(Cog):
                 if flag:
                     await mes.edit('Сообщения были успешно удалены! ' + f'({amount})')
                 else:
-                    await mes.edit('По какой-то причине целевое сообщение не было удалено')
+                    await mes.edit('По какой-то причине целевое сообщение не было удалено. Вероятно, что история слишком длинная и сработало ограничение на удаления. Попробуйте еще раз вызвать эту команду')
             except:
                 if 'mes' in locals():
                     await mes.edit('Не удалось удалить сообщения! Была вызвана неизвестная ошибка')
