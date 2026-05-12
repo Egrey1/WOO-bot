@@ -1,6 +1,6 @@
 from .commands import *
 
-class Temp(Clear, GiveRole):
+class Temp(Clear, GiveRole, Roll):
     def __init__(self, bot):
         self.bot = bot
 
