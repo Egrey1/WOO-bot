@@ -5,7 +5,7 @@ class GiveRole(Cog):
 
     async def on_search_add_completed(self, message: Message, role: Role, member_id: int):
         member = self.give_role_searches.pop(member_id)[1]
-        if role in member.roles:
+        if any(role.id == user_role.id for user_role in member.roles):
             await message.reply('У пользователя уже есть эта роль')
             return
 
@@ -14,7 +14,7 @@ class GiveRole(Cog):
 
     async def on_search_remove_completed(self, message: Message, role: Role, member_id: int):
         member = self.give_role_searches.pop(member_id)[1]
-        if role not in member.roles:
+        if not any(role.id == user_role.id for user_role in member.roles):
             await message.reply('У пользователя уже нет этой роли')
             return
         
@@ -55,6 +55,9 @@ class GiveRole(Cog):
             return
         
         elif len(roles) == 1:
+            if any(roles[0].id == user_role.id for user_role in member.roles): # type: ignore
+                await ctx.send('У пользователя уже есть эта роль')
+                return
             await member.add_roles(roles[0]) # pyright: ignore[reportAttributeAccessIssue]
             await ctx.send(f'Роль {roles[0].mention} выдана')
             return
@@ -91,8 +94,11 @@ class GiveRole(Cog):
             return
         
         elif len(roles) == 1:
-            await member.add_roles(roles[0]) # pyright: ignore[reportAttributeAccessIssue]
-            await ctx.send(f'Роль {roles[0].mention} была удалена')
+            if not any(roles[0].id == user_role.id for user_role in member.roles): # type: ignore
+                await ctx.send('У пользователя уже нет этой роли')
+                return
+            await member.remove_roles(roles[0])  # type: ignore
+            await ctx.send(f'Роль {roles[0].mention} была удалена у пользователя ' + member.mention) # type: ignore
             return
         else:
             d = {}
@@ -102,7 +108,7 @@ class GiveRole(Cog):
             self.give_role_searches[ctx.author.id] = (deps.Search( # type: ignore
                 'Выберите роль', d, 
                 ctx.author.id, 
-                complete_handler=deps.EventHandler(coro_event=self.on_search_add_completed),
+                complete_handler=deps.EventHandler(coro_event=self.on_search_remove_completed),
                 error_handler=deps.EventHandler(coro_event=self.on_search_cancelled)
                 ), member)
             await self.give_role_searches[ctx.author.id][0].send_label(ctx)

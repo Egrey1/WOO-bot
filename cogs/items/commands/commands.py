@@ -23,13 +23,17 @@ class ItemCommands(Cog):
                 name: bool = False, 
                 desc: bool = False, 
                 cost: bool = False, 
-                role: bool = False
+                role: bool = False,
+                add_tag: bool = False,
+                delete_tag: bool = False
                 ):
             self.item = item
             self.name = name
             self.desc = desc
             self.cost = cost
             self.role = role
+            self.add_tag = add_tag
+            self.delete_tag = delete_tag
             self.message = message_to_edit
             self.acti = components # type: ignore
 
@@ -79,6 +83,18 @@ class ItemCommands(Cog):
                 except:
                     await interaction.response.send_message('Отмена, ожидалось число', ephemeral=True)
                     return
+            elif self.add_tag:
+                if value in self.item.tags:
+                    await interaction.response.send_message('Отмена, тег уже существует', ephemeral=True)
+                    return
+                self.item.add_tag(value) # type: ignore
+            
+            if self.delete_tag:
+                if value not in self.item.tags:
+                    await interaction.response.send_message('Отмена, тег не найден', ephemeral=True)
+                    return
+                self.item.remove_tag(value) # type: ignore
+
             
             components = self.item.get_v2component(True) + self.acti 
             await interaction.response.edit_message(
@@ -355,6 +371,14 @@ class ItemCommands(Cog):
 
             elif 'role' in option:
                 modal = self.EditsModal(item, 'Требуемая роль', interaction.message, [] if not (item.id in self.creates) else components, role=True)
+                await interaction.response.send_modal(modal)
+            
+            elif 'add_tag' in option:
+                modal = self.EditsModal(item, 'Добавить тег', interaction.message, [] if not (item.id in self.creates) else components, add_tag=True)
+                await interaction.response.send_modal(modal)
+            
+            elif 'delete_tag' in option:
+                modal = self.EditsModal(item, 'Удалить тег', interaction.message, [] if not (item.id in self.creates) else components, delete_tag=True)
                 await interaction.response.send_modal(modal)
             
         

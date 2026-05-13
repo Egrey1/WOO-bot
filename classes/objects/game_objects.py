@@ -951,7 +951,9 @@ class ShopItem(_BaseEntity):
                     ),
                     ui.TextDisplay(
                         f'Требуемая роль: <@&{self.required_role_id}>' if self.required_role_id is not None else 'Требуемая роль: Нет'
-                    )
+                    ),
+                    ui.Separator(),
+                    ui.TextDisplay('-# ' + (', '.join(self.tags) if self.tags else 'Теги отсутствуют'))
                 )
             ]
         else:
@@ -986,6 +988,14 @@ class ShopItem(_BaseEntity):
                             disabled= not self.is_active
                         )
                     ),
+                    ui.ActionRow(
+                        ui.Button(
+                            label='Изменить цену',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'item_edit_price {self.id}',
+                            emoji='⚙️'
+                        )
+                    ), # type: ignore
                     ui.Section(
                         ui.TextDisplay(
                             f'Требуемая роль: <@&{self.required_role_id}>' if self.required_role_id is not None else 'Требуемая роль: Нет'
@@ -998,27 +1008,36 @@ class ShopItem(_BaseEntity):
                             disabled= not self.required_role_id
                         )
                     ),
-                    
+                    ui.ActionRow(
+                        ui.RoleSelect(
+                            placeholder='Изменить требуемую роль',
+                            custom_id=f'item_edit_role {self.id}'
+                        )
+                    ),
+                    ui.Separator(),
+                    ui.TextDisplay('-# ' + (', '.join(self.tags) if self.tags else 'Теги отсутствуют')),
+                    ui.ActionRow(
+                        ui.Button(
+                            label='Добавить тег',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'item_edit_add_tag {self.id}',
+                            emoji='⚙️'
+                        ),
+                        ui.Button(
+                            label='Удалить тег',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'item_edit_delete_tag {self.id}',
+                            emoji='⚙️'
+                        )
+                    )
                 ),
                 ui.ActionRow(
-                    ui.Button(
-                        label='Изменить цену',
-                        style=ButtonStyle.blurple,
-                        custom_id=f'item_edit_price {self.id}',
-                        emoji='⚙️'
-                    ),
                     ui.Button(
                         label='Удалить',
                         style=ButtonStyle.danger,
                         custom_id=f'item_delete {self.id}',
                         emoji='🗑️'
-                    )
-                ),
-                ui.ActionRow(
-                    ui.RoleSelect(
-                        placeholder='Изменить требуемую роль',
-                        custom_id=f'item_edit_role {self.id}'
-                    )
+                    )                    
                 )
             ]
 
@@ -1505,6 +1524,20 @@ class RoleIncome(_BaseEntity):
                     ui.Separator(),
                     ui.TextDisplay(
                         '-# ' + (', '.join(self.tags) if self.tags else 'Теги отсутствуют')
+                    ),
+                    ui.ActionRow(
+                        ui.Button(
+                            label='Добавить тег',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'role_edit_add_tag {self.id}',
+                            emoji='⚙️'
+                        ),
+                        ui.Button(
+                            label='Удалить тег',
+                            style=ButtonStyle.blurple,
+                            custom_id=f'role_edit_remove_tag {self.id}',
+                            emoji='⚙️'
+                        )
                     )
                 ),
                 ui.ActionRow(
@@ -1513,20 +1546,6 @@ class RoleIncome(_BaseEntity):
                         style=ButtonStyle.danger,
                         custom_id=f'role_delete {self.id}',
                         emoji='🗑️'
-                    )
-                ),
-                ui.ActionRow(
-                    ui.Button(
-                        label='Добавить тег',
-                        style=ButtonStyle.blurple,
-                        custom_id=f'role_edit_add_tag {self.id}',
-                        emoji='⚙️'
-                    ),
-                    ui.Button(
-                        label='Удалить тег',
-                        style=ButtonStyle.blurple,
-                        custom_id=f'role_edit_remove_tag {self.id}',
-                        emoji='⚙️'
                     )
                 )
             ]
