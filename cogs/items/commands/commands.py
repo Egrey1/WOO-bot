@@ -414,7 +414,18 @@ class ItemCommands(Cog):
         custom_id = interaction.component.custom_id
         if not custom_id or not custom_id.startswith('item'):
             return
+    
+        rights = deps.Rights()
+        moderator_mode = (
+                interaction.user.guild_permissions.administrator or  # type: ignore
+                rights.is_administrator(interaction.user) or  
+                rights.is_manage_items(interaction.user))
         
+        if not moderator_mode:
+            await interaction.response.send_message(embed=self._error_embed('Ошибка прав', 'У вас нет прав для выполнения этой команды'), ephemeral=True)
+            return
+
+
         if 'item_edit' in custom_id:
             item = deps.ShopItem(custom_id.split()[1])
             components = [
@@ -437,7 +448,7 @@ class ItemCommands(Cog):
                 await interaction.response.defer(with_message=False)
                 value: Role = interaction.resolved_values[0]  # type: ignore
                 item.edit(required_role=value)
-                components = item.get_v2component(True) + ((components) if item.id in self.creates else [])
+                components = item.get_v2component(moderator_mode) + ((components) if item.id in self.creates else [])
                 await interaction.message.edit(
                     components=components, # type: ignore
                     flags=MessageFlags(is_components_v2=True)
