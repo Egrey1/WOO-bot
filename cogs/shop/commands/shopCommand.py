@@ -6,8 +6,8 @@ class ShopCommand(Cog):
     original_message: dict[int, Message] = {}
 
     @command(name='shop')
-    async def shop(self, ctx: Context):
-        self.all_items = deps.ShopItem.all()
+    async def shop(self, ctx: Context, *, filter: str = ''):
+        self.all_items = (item for item in deps.ShopItem.all() if filter.lower() in item.name.lower())
         embed = Embed(title='Игровой магазин')
         self.normal_shop[ctx.author.id] = []
 

@@ -47,8 +47,7 @@ class Roll(Cog):
                             Separator(),
                             TextDisplay('**' + choice + '**'),
                             TextDisplay('-# Миссия завершена успешно, но достойно ли? Не уверен'),
-                            accent_colour=Colour.green(),
-                            spoiler=True
+                            accent_colour=Colour.green()
                         )
                     ]
                     await mes.edit(components=components, flags=MessageFlags(is_components_v2=True))
@@ -73,8 +72,7 @@ class Roll(Cog):
                             Separator(),
                             TextDisplay('**' + arg.strip() + '**'),
                             TextDisplay('-# Миссия завершена успешно и достойно, я покидаю свой пост'),
-                            accent_colour=Colour.green(),
-                            spoiler=True
+                            accent_colour=Colour.green()
                         )
                     ]
                     await mes.edit(components=components, flags=MessageFlags(is_components_v2=True))
