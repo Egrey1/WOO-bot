@@ -6,7 +6,6 @@ class TopCommand(Cog):
         
     @command('top')
     async def top(self, ctx: Context):
-        import random
         all_balances = deps.get_all_balances()
         all_balances = [(balance.id, balance[deps.MAIN_CURRENCY_ID].amount) for balance in all_balances] # type: ignore
         symbol = deps.Currency(deps.MAIN_CURRENCY_ID).symbol
@@ -24,9 +23,6 @@ class TopCommand(Cog):
             description='\n'.join(str((i + 1)) + '. ' + (('<@' + str(balance[0]) + '>')) + ' - ' + deps.bamount(balance[1]) + (symbol or '') for i, balance in enumerate(all_balances[:self.PAGE_SIZE]))
         ), view= view if len(all_balances) > self.PAGE_SIZE else None)) # type: ignore
         self.current_page[mes.id] = 0
-
-        if random.randint(0, 100) <= 5:
-            await ctx.send('Мне нужна помощь! Это срочно, пока разработчик не увидел. Ты должен собрать цифры воедино`.`', delete_after=5)
     
     async def next_page(self, interaction: MessageInteraction):
         self.current_page[interaction.message.id] += 1

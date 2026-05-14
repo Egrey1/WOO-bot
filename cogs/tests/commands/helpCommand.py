@@ -15,18 +15,19 @@ class HelpCommand(Cog):
                     TextDisplay('## Теги ролей заработка'),
                     TextDisplay('### percantageI'),
                     TextDisplay('Увеличивает заработок других ролей на определенный процент (100% не меняет ничего)'),
-                    Separator(),
                     TextDisplay('### percentageBbefore'),
                     TextDisplay('Начисляет процент текущему балансу перед сбором заработка с остальных ролей (100% не меняет ничего)'),
-                    Separator(),
                     TextDisplay('### percentageBafter'),
                     TextDisplay('Начисляет процент новому балансу после сбора заработка с остальных ролей (100% не меняет ничего)'),
-                    Separator(),
                     TextDisplay('### ignorecooldown'),
                     TextDisplay('Этот тег позволяет роли игнорировать ее кд'),
-                    Separator(),
                     TextDisplay('### autocollect'),
                     TextDisplay('При использовании этого тега заработок с роли будет начисляться автоматически. Если кд слишком маленькое или вместе с этим тегом будет использоваться ignorecooldown, то автоколлект будет работать раз в час'),
+                    Separator(),
+                    Separator(),
+                    TextDisplay('## Теги игровых предметов'),
+                    TextDisplay('### disabled'),
+                    TextDisplay('Показывает, что предмет неактивен и недоступен для покупки'),
                     Separator(),
                     Separator(),
                     TextDisplay('## Пользовательские теги'),
@@ -36,38 +37,6 @@ class HelpCommand(Cog):
                     TextDisplay('-# ' + deps.VERSION)
                 )
             ]
-        elif name in ('duck', 'ducks'):
-            if ctx.author.id == 1:
-                components = [
-                        Container(
-                            TextDisplay('# Справка по уткам'),
-                            Separator(),
-                            Separator(),
-                            TextDisplay('Они хорошенькие и добренькие'),
-                            Separator(),
-                            TextDisplay('Они любят всех'),
-                            Separator(),
-                            TextDisplay('Они прыгают от счастья когда их кормят'),
-                            Separator()
-                        )
-                    ]
-            else:
-                de = 7.0
-                components = [
-                    Container(
-                        TextDisplay('# Справка по уткам'),
-                        Separator(),
-                        Separator(),
-                        TextDisplay('Они хорошенькие и добренькие'),
-                        Separator(),
-                        TextDisplay('Они любят всех'),
-                        Separator(),
-                        TextDisplay('Они прыгают от счастья когда их кормят'),
-                        Separator(),
-                        TextDisplay('Они создают бота для сервера Starlight RP, Егрею только ничего не говорите'),
-                        Separator(),
-                    )
-                ]
         else:
             components = [
                 Container(

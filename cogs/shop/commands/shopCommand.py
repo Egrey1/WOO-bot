@@ -11,7 +11,7 @@ class ShopCommand(Cog):
             self.all_items = (item for item in deps.ShopItem.all() if any(filter.lower() in tag.lower() for tag in item.tags))
         else:
             filter = (param + ' ' + filter).strip()
-            self.all_items = (item for item in deps.ShopItem.all() if filter.lower() in item.name.lower())
+            self.all_items = (item for item in deps.ShopItem.all() if (filter.lower() in item.name.lower()))
         embed = Embed(title='Игровой магазин')
         self.normal_shop[ctx.author.id] = []
 
@@ -23,7 +23,8 @@ class ShopCommand(Cog):
                 embed.add_field(
                     name=(
                         params[0] + ' — ' + deps.bamount(item.cost_amount) +
-                        (deps.Currency(item.cost_currency_id).symbol or '')
+                        (deps.Currency(item.cost_currency_id).symbol or '') + 
+                        (' ❌' if not item.is_active else '')
                     ), 
                     value=params[1],
                     inline=False

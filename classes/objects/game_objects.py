@@ -849,6 +849,10 @@ class ShopItem(_BaseEntity):
         if is_active is not None:
             updates.append('is_active = ?')
             params.append(int(is_active))
+            if not is_active:
+                self.add_tag('disabled')
+            else:
+                self.remove_tag('disabled')
         if tags is not None:
             updates.append('tags = ?')
             params.append(_serialize_tags(tags))
@@ -1039,8 +1043,8 @@ class ShopItem(_BaseEntity):
                         emoji='🗑️'
                     ),
                     ui.Button(
-                        label='Активировать' if self.is_active else 'Деактивировать',
-                        style=ButtonStyle.green if self.is_active else ButtonStyle.red,
+                        label='Активировать' if not self.is_active else 'Деактивировать',
+                        style=ButtonStyle.green if not self.is_active else ButtonStyle.red,
                         custom_id=f'item_toggle_active {self.id}',
                         emoji='🔧'
                     )
@@ -1507,7 +1511,7 @@ class RoleIncome(_BaseEntity):
                     ui.Separator(),
                     ui.Section(
                         ui.TextDisplay(
-                             'Кулдаун: ' + form_str
+                             'Кулдаун: ' + (form_str if (not 'ignorecooldown' in self.tags) or (self.cooldown_seconds == 0) else 'Нет')
                         ),
                         accessory=ui.Button(
                             label='Изменить', 
