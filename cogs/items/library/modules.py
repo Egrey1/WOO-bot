@@ -4,3 +4,4 @@ from disnake.ui import Modal, TextInput, ActionRow, Button, View
 
 import dependencies as deps
 import asyncio
+import logging

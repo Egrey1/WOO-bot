@@ -1,4 +1,10 @@
-from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View, Role
+from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View, Role, logging
+
+def form_s(v: str | int):
+    if isinstance(v, int):
+        return v
+    v = v.replace(',', '')
+    return int(v.split('e')[0]) * (10 ** int(v.split('e')[1])) if 'e' in v else int(v)
 
 class ItemCommands(Cog):
     find_items: dict[int, tuple[list[deps.ShopItem], bool]] = {}
@@ -67,7 +73,7 @@ class ItemCommands(Cog):
                 self.item.edit(description=value) 
             elif self.cost:
                 try:
-                    self.item.edit(cost=int(value)) # type: ignore
+                    self.item.edit(cost=form_s(value)) # type: ignore
                 except:
                     await interaction.response.send_message('Отмена, ожидалось число', ephemeral=True)
                     return
