@@ -1,4 +1,4 @@
-from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View, Role, logging
+from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View, Role
 
 def form_s(v: str | int):
     if isinstance(v, int):
@@ -393,6 +393,13 @@ class ItemCommands(Cog):
             item.delete()
             await interaction.message.delete()
             await interaction.response.send_message('Предмет удален', ephemeral=True)
+        
+        elif option == 'item_toggle_active':
+            item = deps.ShopItem(custom_id.split()[1])
+            item.edit(is_active=not item.is_active)
+            components = item.get_v2component(True)
+            await interaction.message.edit(components=components, flags=MessageFlags(is_components_v2=True)) # type: ignore
+            await interaction.response.defer(with_message=False)
 
         elif option == 'item_create':
             await interaction.response.defer()
@@ -475,7 +482,6 @@ class ItemCommands(Cog):
                 )
             ]
             if 'role' in custom_id:
-                await interaction.response.defer(with_message=False)
                 value: Role = interaction.resolved_values[0]  # type: ignore
                 item.edit(required_role=value)
                 components = item.get_v2component(moderator_mode) + ((components) if item.id in self.creates else [])
@@ -483,4 +489,5 @@ class ItemCommands(Cog):
                     components=components, # type: ignore
                     flags=MessageFlags(is_components_v2=True)
                 )
+                await interaction.response.defer(with_message=False)
 

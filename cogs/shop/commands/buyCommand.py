@@ -21,17 +21,19 @@ class BuyCommand(Cog):
             return
 
         for item in deps.ShopItem.all():
-            if item_name.lower() in item.name.lower() and item.is_active:
+            if (item_name.lower() in item.name.lower()) and item.is_active:
                 self.items[ctx.author.id] += [item]
 
         if len(self.items[ctx.author.id]) == 1:
             embed = self._buy_process(ctx.author, self.items[ctx.author.id][0], count) # type: ignore
+            self.items.pop(ctx.author.id)
         elif len(self.items[ctx.author.id]) == 0:
             embed = Embed(
                 title='Не найдено!',
                 description='Такого предмета нет в магазине!', 
                 colour=Colour.red()
             )
+            self.items.pop(ctx.author.id)
         else:
             form_s = ''
             for i in range(len(self.items[ctx.author.id])):
@@ -120,7 +122,7 @@ class BuyCommand(Cog):
                 return
             
             embed = self._buy_process(message.author, self.items[message.author.id][i], self.count[message.author.id])
-            self.items[message.author.id].clear()
+            self.items.pop(message.author.id)
             await message.reply(embed=embed, allowed_mentions=AllowedMentions.none())
             return
         embed = Embed(

@@ -965,7 +965,7 @@ class ShopItem(_BaseEntity):
                             label='Изменить',
                             style=ButtonStyle.blurple,
                             custom_id=f'item_edit_name {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         )
                     ),
                     ui.Separator(),
@@ -975,7 +975,7 @@ class ShopItem(_BaseEntity):
                             label='Изменить',
                             style=ButtonStyle.blurple,
                             custom_id=f'item_edit_description {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         )
                     ),
                     ui.Section(
@@ -993,7 +993,7 @@ class ShopItem(_BaseEntity):
                             label='Изменить цену',
                             style=ButtonStyle.blurple,
                             custom_id=f'item_edit_price {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         )
                     ), # type: ignore
                     ui.Section(
@@ -1004,7 +1004,7 @@ class ShopItem(_BaseEntity):
                             label='Удалить',
                             style=ButtonStyle.blurple,
                             custom_id=f'item_delete_role {self.id}',
-                            emoji='⚙️',
+                            emoji='🔧',
                             disabled= not self.required_role_id
                         )
                     ),
@@ -1021,13 +1021,13 @@ class ShopItem(_BaseEntity):
                             label='Добавить тег',
                             style=ButtonStyle.blurple,
                             custom_id=f'item_edit_add_tag {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         ),
                         ui.Button(
                             label='Удалить тег',
                             style=ButtonStyle.blurple,
                             custom_id=f'item_edit_delete_tag {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         )
                     )
                 ),
@@ -1037,8 +1037,14 @@ class ShopItem(_BaseEntity):
                         style=ButtonStyle.danger,
                         custom_id=f'item_delete {self.id}',
                         emoji='🗑️'
-                    )                    
-                )
+                    ),
+                    ui.Button(
+                        label='Активировать' if self.is_active else 'Деактивировать',
+                        style=ButtonStyle.green if self.is_active else ButtonStyle.red,
+                        custom_id=f'item_toggle_active {self.id}',
+                        emoji='🔧'
+                    )
+                ) 
             ]
 
     def get_container(self) -> ui.Container:
@@ -1507,7 +1513,7 @@ class RoleIncome(_BaseEntity):
                             label='Изменить', 
                             style=ButtonStyle.blurple, 
                             custom_id=f'role_edit_cooldown {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         )
                     ),
                     ui.Section(
@@ -1518,7 +1524,7 @@ class RoleIncome(_BaseEntity):
                             label='Изменить', 
                             style=ButtonStyle.blurple, 
                             custom_id=f'role_edit_income {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         )
                     ),
                     ui.Separator(),
@@ -1530,13 +1536,13 @@ class RoleIncome(_BaseEntity):
                             label='Добавить тег',
                             style=ButtonStyle.blurple,
                             custom_id=f'role_edit_add_tag {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         ),
                         ui.Button(
                             label='Удалить тег',
                             style=ButtonStyle.blurple,
                             custom_id=f'role_edit_remove_tag {self.id}',
-                            emoji='⚙️'
+                            emoji='🔧'
                         )
                     )
                 ),
