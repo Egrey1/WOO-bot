@@ -74,8 +74,8 @@ class BuyCommand(Cog):
 
     def _buy_process(self, author: User | Member, item: deps.ShopItem, count: int) -> Embed:
         balance = author.get_balance()[deps.MAIN_CURRENCY_ID].amount
-        price = self.items[author.id][0].cost_amount * count
-        required_role_id = self.items[author.id][0].required_role_id
+        price = item.cost_amount * count
+        required_role_id = item.required_role_id
         if not balance or balance < price:
             return Embed(
                 title='Недостаточно средств!', 

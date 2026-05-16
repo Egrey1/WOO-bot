@@ -252,6 +252,7 @@ class Rights:
         'manage_rincomes',
         'manage_resources',
         'manage_roles',
+        'rp_curator',
         'administrator',
     )
 
@@ -284,8 +285,8 @@ class Rights:
             if count == 0:
                 cursor.execute(
                     """
-                    INSERT INTO rights (manage_items, manage_rincomes, manage_roles, manage_resources, administrator)
-                    VALUES ('', '', '', '')
+                    INSERT INTO rights (manage_items, manage_rincomes, manage_roles, manage_resources, rp_curator, administrator)
+                    VALUES ('', '', '', '', '', '')
                     """
                 )
                 connect.commit()
@@ -296,7 +297,7 @@ class Rights:
             cursor = connect.cursor()
             cursor.execute(
                 """
-                SELECT manage_items, manage_rincomes, manage_resources, manage_roles, administrator
+                SELECT manage_items, manage_rincomes, manage_resources, manage_roles, administrator, rp_curator
                 FROM rights
                 LIMIT 1
                 """
@@ -400,6 +401,18 @@ class Rights:
     def set_administrator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
         return self.set('administrator', role_ids)
 
+    def get_rp_curator(self) -> list[int]:
+        return self.get('rp_curator')
+
+    def add_rp_curator(self, role_id: int) -> list[int]:
+        return self.add('rp_curator', role_id)
+
+    def remove_rp_curator(self, role_id: int) -> list[int]:
+        return self.remove('rp_curator', role_id)
+
+    def set_rp_curator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self.set('rp_curator', role_ids)
+
     def get_manage_roles(self) -> list[int]:
         return self.get('manage_roles')
 
@@ -426,6 +439,9 @@ class Rights:
     
     def is_administrator(self, user: Member) -> bool:
         return any([role.id in self.get_administrator() for role in user.roles])
+    
+    def is_rp_curator(self, user: Member) -> bool:
+        return any([role.id in self.get_rp_curator() for role in user.roles])
 
 
 class Currency(_BaseEntity):

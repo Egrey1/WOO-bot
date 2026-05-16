@@ -447,6 +447,18 @@ class Rights:
     def set_manage_roles(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
         """Полностью заменяет поле `manage_roles`."""
 
+    def get_rp_curator(self) -> list[int]: # type: ignore
+        """Возвращает список ролей из поля `manage_roles`."""
+
+    def add_rp_curator(self, role_id: int) -> list[int]: # type: ignore
+        """Добавляет роль в поле `manage_roles`."""
+
+    def remove_rp_curator(self, role_id: int) -> list[int]: # type: ignore
+        """Удаляет роль из поля `manage_roles`."""
+
+    def set_rp_curator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """Полностью заменяет поле `manage_roles`."""
+
     def is_manage_items(self, user: Member | User) -> bool: # type: ignore
         """Проверяет, имеет ли права user на управление предметами магазина"""
     
@@ -461,6 +473,9 @@ class Rights:
 
     def is_manage_roles(self, user: Member) -> bool: # type: ignore
         """Проверяет, имеет ли права user на добавление/удаление других ролей"""
+
+    def is_rp_curator(self, user: Member) -> bool: # type: ignore
+        """Проверяет, имеет ли права user на управление ролями для заработка"""
 
 class Currency:
     """

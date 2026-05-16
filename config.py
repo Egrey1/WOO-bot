@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.28 Отключение интерактива, улучшена работа с активацией/деактивацией предметов' 
+    deps.VERSION = '2.29 Логирование подозрительных переводов и исправление команды !buy' 
     
     deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
