@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.29 Логирование подозрительных переводов и исправление команды !buy' 
+    deps.VERSION = '2.30 обновление команды !shop и ее логики' 
     
     deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
@@ -67,4 +67,5 @@ async def second_config():
     logging.info(f'Бот успешно запущен как {deps.bot.user}')
     logging.info(f'Количество загруженных когов/расширений: {len(deps.bot.cogs)}')
     logging.info(f'Количество доступных команд: {len(deps.bot.all_commands)}')
+    logging.info(f'Список всех команд: ' + ', '.join(deps.bot.all_commands.keys()))
     logging.info(f'Версия бота: {deps.VERSION}')

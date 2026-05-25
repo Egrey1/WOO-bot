@@ -944,13 +944,14 @@ class ShopItem(_BaseEntity):
             embed.add_field(name='Остаток', value=str(self.stock), inline=False)
         return embed
 
-    def get_embed_field_params(self) -> tuple[str, str]:
+    def get_embed_field_params(self) -> tuple[str, str, str]:
         """"""
 
         description = self.description or ''
+        custom_id = "Shop view " + str(self.id)
         if len(description) <= 200:
-            return self.name, description
-        return self.name, description[:197] + '...'
+            return self.name, description, custom_id
+        return self.name, description[:197] + '...', custom_id
 
     def get_v2component(self, moderator_mode: bool = False) -> list[ui.Container | ui.ActionRow]:
         if not moderator_mode:

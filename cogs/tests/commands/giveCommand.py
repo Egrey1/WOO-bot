@@ -39,7 +39,10 @@ class GiveCommand(Cog):
             await interaction.response.defer(with_message=False)
             return
         inv1[item.id] -= amount # type: ignore
-        inv2[item.id] = inv2.get(item.id, 0) + amount # type: ignore
+        if not item.id in inv2:
+            inv2[item.id] = amount
+        else:
+            inv2[item.id] = inv2.get(item.id, 0).amount + amount # type: ignore
         await interaction.message.edit(embed=Embed(
             title='Операция прошла успешно',
             description='Вы передали \'' + item.name + '\' в количестве ' + str(amount),
