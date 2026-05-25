@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.30 обновление команды !shop и ее логики' 
+    deps.VERSION = '2.31 обновление команды !item и !iteminfo и ее логики' 
     
     deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row

@@ -1,4 +1,4 @@
-from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View, Role
+from ..library import Cog, deps, command, Context, Message, asyncio, ButtonStyle, MessageFlags, Embed, Colour, MessageInteraction, Modal, TextInput, ModalInteraction, ActionRow, Button, View, Role, ceil
 
 def form_s(v: str | int):
     if isinstance(v, int):
@@ -168,19 +168,21 @@ class ItemCommands(Cog):
                 ]
 
             if components:
-                await ctx.send(
+                self.original_messages[ctx.author.id] = [await ctx.send(
                     components=components,  # type: ignore
-                    flags=MessageFlags(is_components_v2=True)) 
+                    flags=MessageFlags(is_components_v2=True))] 
             else:
                 await ctx.send(embed=self._error_embed('Ошибка', 'Предмет не найден'))
             
 
         else:
             self.find_items[ctx.author.id] = (items, moderator_mode)
-            embed = Embed(
+            embeds = []
+            for j in range(ceil(len(self.find_items[ctx.author.id][0]) / 50)):
+                embeds.append(Embed(
                 title="Выберите предмет",
-                description='\n'.join(f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0][:50]))
-            )
+                description='\n'.join(f'{(j * 50) + i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0][j * 50:50 * (j + 1)]))
+            ))
             if name and moderator_mode and not any(name == role.name for role in items):
                 view = View()
                 but = Button(
@@ -189,9 +191,19 @@ class ItemCommands(Cog):
                     emoji='👆'
                 )
                 view.add_item(but)
-                self.original_messages[ctx.author.id] = await ctx.send(embed=embed, view=view)
+                self.original_messages[ctx.author.id] = []
+                for i in range(len(embeds)):
+                    embed = embeds[i]
+                    if (i + 1) == len(embeds):
+                        tmes = await ctx.send(embed=embed, view=view)
+                        self.original_messages[ctx.author.id]+= [tmes]
+                    else:
+                        tmes = await ctx.send(embed=embed)
+                        self.original_messages[ctx.author.id]+= [tmes]
             else:
-                self.original_messages[ctx.author.id] = await ctx.send(embed=embed)
+                self.original_messages[ctx.author.id] = []
+                for embed in embeds:
+                    self.original_messages[ctx.author.id] += [await ctx.send(embed=embed)]
 
             timeout_task = asyncio.create_task(self._timeout_handler(ctx))
             self.waiting_users[ctx.author.id] = (ctx.channel.id, timeout_task)
@@ -205,16 +217,20 @@ class ItemCommands(Cog):
             if components:
                 await ctx.send(
                     components=components,  # type: ignore
-                    flags=MessageFlags(is_components_v2=True)) 
+                    flags=MessageFlags(is_components_v2=True))
             else:
                 await ctx.send(embed=self._error_embed('Ошибка', 'Предмет не найден'))
         else:
             self.find_items[ctx.author.id] = (items, False)
-            embed = Embed(
+            embeds = []
+            for j in range(ceil(len(self.find_items[ctx.author.id][0]) / 50)):
+                embeds.append(Embed(
                 title="Выберите предмет",
-                description='\n'.join([f'{i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0])][:50])
-            )
-            self.original_messages[ctx.author.id] = await ctx.send(embed=embed)
+                description='\n'.join(f'{(j * 50) + i + 1}. {item.name}' for i, item in enumerate(self.find_items[ctx.author.id][0][j * 50:50 * (j + 1)]))
+            ))
+            self.original_messages[ctx.author.id] = []
+            for embed in embeds:
+                self.original_messages[ctx.author.id] += [await ctx.send(embed=embed)]
 
             timeout_task = asyncio.create_task(self._timeout_handler(ctx))
             self.waiting_users[ctx.author.id] = (ctx.channel.id, timeout_task)
@@ -275,18 +291,21 @@ class ItemCommands(Cog):
         # Обработка выбора
         selected_item = items[index]
         try:
-            await self.original_messages[message.author.id].edit(
+            await self.original_messages[message.author.id][0].edit(
                 components=selected_item.get_v2component(moderator_mode), # type: ignore
                 flags=MessageFlags(is_components_v2=True), 
                 embed=None, view=None
             )
+            for mes in range(1, len(self.original_messages[message.author.id])):
+                await mes.delete()
         except:
-            mes = self.original_messages[message.author.id]
-            self.original_messages[message.author.id] = await mes.channel.send(
+            meses = self.original_messages[message.author.id]
+            self.original_messages[message.author.id] = await meses[0].channel.send(
                 components=selected_item.get_v2component(moderator_mode), # type: ignore
                 flags=MessageFlags(is_components_v2=True)
             )
-            await mes.delete()
+            for mes in meses:
+                await mes.delete()
         
         # Очищаем данные
         del self.waiting_users[message.author.id]
@@ -429,17 +448,12 @@ class ItemCommands(Cog):
                 )
             ]
 
-            if interaction.message.flags.is_components_v2:
-                await interaction.message.edit(
-                    components=components, # type: ignore 
-                    flags=MessageFlags(is_components_v2=True)
-                )
-            else:
-                await interaction.message.delete()
-                await interaction.send(
-                    components=components, # type: ignore 
-                    flags=MessageFlags(is_components_v2=True)
-                )
+            await interaction.send(
+                components=components, # type: ignore 
+                flags=MessageFlags(is_components_v2=True)
+            )
+            for mes in self.original_messages[interaction.author.id]:
+                await mes.delete()
 
         elif option == 'item_create_complete':
             item = deps.ShopItem(custom_id.split()[1])
