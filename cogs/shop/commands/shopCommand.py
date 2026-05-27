@@ -1,7 +1,7 @@
-from ..library import deps, command, Context, Embed, Cog, AllowedMentions, Colour, View, Button, MessageInteraction, Message, Container, Section, ButtonStyle, Separator, MessageFlags, ActionRow
+from ..library import deps, command, Context, Embed, Cog, AllowedMentions, Colour, View, Button, MessageInteraction, Message, Container, Section, ButtonStyle, Separator, MessageFlags, ActionRow, TextDisplay
 
 class ShopCommand(Cog):
-    normal_shop = {}
+    normal_shop: dict[int, list] = {}
     current_page = {}
     original_message: dict[int, Message] = {}
     max_page_size = 9
@@ -13,7 +13,6 @@ class ShopCommand(Cog):
         else:
             filter = (param + ' ' + filter).strip()
             self.all_items = (item for item in deps.ShopItem.all() if (filter.lower() in item.name.lower()))
-        embed = Embed(title='Игровой магазин')
         self.normal_shop[ctx.author.id] = []
 
         total = 0
@@ -34,7 +33,7 @@ class ShopCommand(Cog):
             total+= 1
 
         if total == 0:
-            c = Container(TextDisplay='В магазине нет товаров', accent_colour= Colour.red())
+            c = Container(TextDisplay('В магазине нет товаров'), accent_colour= Colour.red())
             await ctx.send(components=[c], allowed_mentions=AllowedMentions.none(), flags=MessageFlags(is_components_v2=True))
             return
         
@@ -47,7 +46,6 @@ class ShopCommand(Cog):
 
             page += [ActionRow(prev_page, next_page)]
             components = [Container(*page)]
-            print(len(components[0].children))
 
             self.current_page[ctx.author.id] = 0
 
@@ -137,9 +135,14 @@ class ShopCommand(Cog):
             self.current_page[int(params[1])] -= 1
             item = deps.ShopItem(int(params[0]))
             components = item.get_v2component() + [ActionRow(Button(label="Вернуться", style=ButtonStyle.blurple, custom_id="Shop next " + params[1]))]
-            await interaction.message.edit(components=components)
+            await interaction.message.edit(components=components) # type: ignore
             await interaction.response.defer(with_message=False)
-            
+        
+    @command(name='shop_items_count')
+    async def shop_items_count(self, ctx: Context):
+        await ctx.send(
+            f'В магазине {len(deps.ShopItem.all())} товаров', 
+            allowed_mentions=AllowedMentions.none())    
 
 class ModShopCommand(Cog):
     normal_shop = {}
@@ -269,4 +272,3 @@ class ModShopCommand(Cog):
             await message.edit(embed=embed, view=view)
         else:
             await interaction.edit_original_response(embed=embed, view=view)
-
