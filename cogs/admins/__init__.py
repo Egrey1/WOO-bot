@@ -1,6 +1,6 @@
 from .commands import *
 
-class AdminsCommands(AddItem, AddMoney, RemoveItem, RemoveMoney):
+class AdminsCommands(AddItem, AddMoney, RemoveItem, RemoveMoney, WipeCommand):
     def __init__(self, bot):
         self.bot = bot
 
