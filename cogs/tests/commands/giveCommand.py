@@ -60,6 +60,9 @@ class GiveCommand(Cog):
 
     @command(name='give')
     async def item_command(self, ctx: Context, member: Member, amount: str, *, name: str = ''):
+        if ctx.author.id == member.id:
+            await ctx.send(embed=self._error_embed('Ошибка', 'Нельзя передавать предметы самому себе'))
+            return
         amount = amount.replace(',', '')
         amount = amount.split('e') # type: ignore
         amount = int(amount[0]) * (10 ** ((int(amount[1]) or 0) if len(amount) >= 2 else 0))

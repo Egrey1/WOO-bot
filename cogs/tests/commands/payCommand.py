@@ -34,6 +34,13 @@ class PayCommand(Cog):
 
     @command('pay')
     async def pay(self, ctx: Context, member: Member, amount: str):
+        if member == ctx.author:
+            await ctx.send(embed=Embed(
+                    title='Ошибка',
+                    description='Нельзя переводить самому себе',
+                    colour=Colour.red()
+            ))
+            return
         if amount == 'all':
             amount = str(int(ctx.author.get_balance()[deps.MAIN_CURRENCY_ID]))
 
