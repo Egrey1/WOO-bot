@@ -3,3 +3,4 @@ from .addMoney import AddMoney
 from .removeItem import RemoveItem
 from .removeMoney import RemoveMoney
 from .wipe import WipeCommand
+from .removeInv import RemoveInvCommand

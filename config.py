@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.33.1 Добавлена команда вайпа9' 
+    deps.VERSION = '2.35 Добавление команды для очистки инвентаря' 
     
     deps.rights = sql.connect('data/rights.db', check_same_thread=False)
     deps.rights.row_factory = sql.Row
