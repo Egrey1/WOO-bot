@@ -1,7 +1,19 @@
 from ..library import command, deps, Cog, Context, Member, Embed, Colour, User, MessageInteraction, View, Button
 
 class RemoveInvCommand(Cog):
-
+    @staticmethod
+    async def accept(interaction: MessageInteraction, member: Member | User, author: Member | User):
+        if interaction.user.id != author.id:
+            await interaction.response.defer(with_message=False)
+            return
+        member.get_inventory().clear()
+        await interaction.message.edit(embed=Embed(
+            title='Операция выполнена успешно!',
+            description='Инвентарь пользователя ' + member.mention + ' очищен',
+            colour=Colour.green()
+        ), view=None)
+        await interaction.response.defer(with_message=False)
+    
     @command('removeinv')
     async def remove_inv(self, ctx: Context, member: Member | User | None = None):
         rights = deps.Rights()
@@ -24,24 +36,10 @@ class RemoveInvCommand(Cog):
                 ))
             return
         member = member or ctx.author
-
-        inv = member.get_inventory()
-        
-        async def accept(interaction: MessageInteraction, inv_: deps._UserInventory):
-            if interaction.user.id != member.id:
-                await interaction.response.defer(with_message=False)
-                return
-            inv_.clear()
-            await interaction.message.edit(embed=Embed(
-                title='Операция выполнена успешно!',
-                description='Инвентарь пользователя ' + member.mention + ' очищен',
-                colour=Colour.green()
-            ), view=None)
-            await interaction.response.defer(with_message=False)
         
         view = View()
-        bt = Button(label='Подтвердить', emoji='✅')
-        bt.callback = lambda i: accept(i, inv)
+        bt = Button(label='Подтвердить', emoji='✅', custom_id='RemoveInv ' + str(member.id))
+        bt.callback = lambda i: self.accept(i, member, ctx.author)
         view.add_item(bt)
 
         await ctx.send(embed=Embed(
@@ -49,5 +47,4 @@ class RemoveInvCommand(Cog):
             description='Вы уверены, что хотите очистить инвентарь пользователя ' + member.mention + '?',
             colour=Colour.yellow()
         ), view=view)
-
         
