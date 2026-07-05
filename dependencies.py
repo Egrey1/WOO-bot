@@ -18,6 +18,11 @@ MAIN_CURRENCY_SYMVOL: str
 MAIN_CURRENCY_ID: int
 
 
+interactive: Connection
+"""
+Временно без документации
+"""
+
 rights: Connection
 """
 Подключение к SQLite-базе данных `rights.db`.
