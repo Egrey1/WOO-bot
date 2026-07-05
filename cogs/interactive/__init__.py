@@ -1,5 +1,5 @@
 from disnake.ext.commands import Cog, command
-from .objects import EventPlayer
+from . import objects
 
 class InteractiveEvents(Cog):
     def __init__(self, bot):
@@ -7,7 +7,7 @@ class InteractiveEvents(Cog):
     
     @command('интерактив')
     async def interactive(self, ctx):
-        ep = EventPlayer(ctx.author.id)
+        ep = objects.EventPlayer(ctx.author.id)
         # ep.tags = list(set(ep.tags + ['enabled']))
         await ctx.send('На данный момент никаких событий нет')
         
