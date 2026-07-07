@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.38.1 Для интерактива добавлен новый локальный класс Group, который уже связан с EventPlayer. Не протестировано' 
+    deps.VERSION = '2.38.2 Добавлен объект Vote и создана команда interactive_event. Почти все готово к голосованию' 
     
     deps.interactive = sql.connect('data/interactive.db', check_same_thread=False)
     deps.interactive.row_factory = sql.Row
