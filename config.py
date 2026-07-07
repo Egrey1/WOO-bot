@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.38.3 К голосованию все готово' 
+    deps.VERSION = '2.39 Добавление интерактива' 
     
     deps.interactive = sql.connect('data/interactive.db', check_same_thread=False)
     deps.interactive.row_factory = sql.Row
