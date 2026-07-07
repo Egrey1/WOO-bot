@@ -6,5 +6,5 @@ class ComponentsTests(Cog):
 
     @command('starlight', aliases=['StarLight', 'Starlight', 'starLight'])
     async def t(self, ctx: Context):
-        await ctx.send('Это самый лучший сервер в своем роде! Поверьте мне`.` `.` `.`')
+        await ctx.send('Это самый лучший сервер в своем роде! Поверьте мне')
         
