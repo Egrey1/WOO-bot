@@ -38,14 +38,17 @@ class InteractiveEvents(Cog):
     async def interactive(self, ctx: Context):
         ep = objects.EventPlayer(ctx.author.id)
         ep.tags = list(set(ep.tags + ['enabled']))
-        # await ctx.send('На данный момент никаких событий нет')
+        if not bool(objects.Config.get('started')):
+            return await ctx.send('На данный момент никаких событий нет')
 
         await ctx.author.send(components=[self.construct_container()], flags=MessageFlags(is_components_v2=True))
     
     @command('interactive_event')
     async def event_interactive(self, ctx: Context):
-        if (ctx.author.id != 820595582027956247) and (ctx.author.id != 642766756699570196) and (not ctx.permissions.administrator):
+        if (ctx.author.id != 820595582027956247) and (ctx.author.id != 642766756699570196):
             return
+        if not bool(objects.Config.get('started')):
+            return await ctx.send('Ивент еще не начался. Измените его состояние через !interactive_change')
         mes = await ctx.send(embed=self.get_votes_embed())
         old_mes_id = objects.Vote.get_message_id()
         if old_mes_id is not None:
@@ -57,7 +60,7 @@ class InteractiveEvents(Cog):
     
     @command('interactive_change')
     async def run(self, ctx: Context): 
-        if (ctx.author.id != 820595582027956247) and (ctx.author.id != 642766756699570196) and (not ctx.permissions.administrator):
+        if (ctx.author.id != 820595582027956247) and (ctx.author.id != 642766756699570196):
             return
         pos = bool(objects.Config.get('started'))
         objects.Config.set('started', int(not pos))
