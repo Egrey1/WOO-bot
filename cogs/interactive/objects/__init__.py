@@ -8,7 +8,7 @@ class Vote:
             with deps.interactive as connect:
                 cursor = connect.cursor()
                 cursor.execute("""
-                               SELECT votes
+                               SELECT *
                                FROM votes
                                WHERE name = ?
                                """, (name, ))
@@ -17,7 +17,8 @@ class Vote:
                 if not fetch:
                     self.name = None
                     return 
-                self._votes: list[int] = [int(i) for i in str(fetch['votes']).split(';')]
+                self._votes: list[int] = [int(i) for i in str(fetch['votes']).split(';')] if fetch['votes'] else []
+                self.description: str = fetch['description']
         except Exception as e:
             logging.error(e)
     
@@ -34,7 +35,7 @@ class Vote:
                                UPDATE votes
                                SET votes = ?
                                WHERE name = ?
-                               """, (self.name, ';'.join([str(i) for i in self._votes])))
+                               """, (';'.join([str(i) for i in self._votes]), self.name))
                 connect.commit()
                 cursor.close()
         except Exception as e:
@@ -220,7 +221,7 @@ class EventPlayer:
                                SELECT id 
                                FROM groups
                                WHERE members LIKE ?
-                               """, ('%' + str(id_) + '%'))
+                               """, ('%' + str(id_) + '%', ))
                 fetch = cursor.fetchone()
                 self.group: Group | None = Group(fetch['id']) if fetch else None
 
@@ -228,7 +229,7 @@ class EventPlayer:
                                SELECT name 
                                FROM votes
                                WHeRE votes LIKE ?
-                               """, ('%' + str(self.id) + '%'))
+                               """, ('%' + str(self.id) + '%', ))
                 fetch = cursor.fetchone()
                 self.vote: Vote | None = Vote(fetch['name']) if fetch else None
         except Exception as e:
@@ -266,3 +267,32 @@ class EventPlayer:
         except Exception as e:
             logging.error(e)
 
+
+class Config:
+    @staticmethod
+    def get(key):
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute(f"""
+                               SELECT {key}
+                               FROM config
+                               """)
+                fetch = cursor.fetchone()[key]
+                cursor.close()
+                return fetch
+        except Exception as e:
+            logging.error(e)
+            
+    @staticmethod
+    def set(key, value):
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute(f"""
+                               UPDATE config
+                               SET {key} = ?
+                               """, (value, ))
+                cursor.close()
+        except Exception as e:
+            logging.error(e)
