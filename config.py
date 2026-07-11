@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.40.2 Добавление создания и присоединения к группам' 
+    deps.VERSION = '2.40.3 Исправление ошибок. Улучшение добавленного функционала' 
     
     deps.interactive = sql.connect('data/interactive.db', check_same_thread=False)
     deps.interactive.row_factory = sql.Row

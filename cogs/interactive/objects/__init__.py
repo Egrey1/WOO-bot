@@ -1,6 +1,6 @@
 import dependencies as deps
 import logging
-from disnake import ui, ButtonStyle, SelectOption
+from disnake import Member, User, ui, ButtonStyle, SelectOption
 
 class Vote:
     def __init__(self, name: str):
@@ -113,10 +113,10 @@ class Group:
                     raise ValueError('Группа не найдена')
                 self.id = id_
                 self.name: str = fetch['name']
-                self.leader_id: int = int(fetch['leader_id'])
+                self.leader_id: int | None = int(fetch['leader_id']) if fetch['leader_id'] else None
                 self.level = int(fetch['level'])
-                self._members_id: list[int] = [int(i) for i in str(fetch['members']).split(';')]
-                self._tags: list[str] = str(fetch['tags']).split(';')
+                self._members_id: list[int] = [int(i) for i in str(fetch['members']).split(';')] if fetch['members'] else []
+                self._tags: list[str] = str(fetch['tags']).split(';') if fetch['tags'] else []
                 self._upgrades: list[str] = str(fetch['upgrades']).split(';') if fetch['upgrades'] else []
                 self._requests: list[int] = [int(i) for i in str(fetch['requests']).split(';')] if fetch['requests'] else []
         except Exception as e:
@@ -127,8 +127,8 @@ class Group:
         try:
             with deps.interactive as connect:
                 cursor = connect.cursor()
-                sets = ' = ?, '.join(kwargs.keys())
-                params = tuple(list(kwargs.keys()) + [self.id])
+                sets = (' = ?, '.join(kwargs.keys())) + ' = ?'
+                params = tuple(list(kwargs.values()) + [self.id])
                 cursor.execute(f"""
                                 UPDATE groups
                                 SET {sets}
@@ -136,13 +136,20 @@ class Group:
                 """, params)
                 connect.commit()
                 cursor.close()
+                for k, v in kwargs.items():
+                    if k == 'members':
+                        k = 'members_id'
+                    if k in ('members_id', 'tags', 'upgrades', 'requests'):
+                        k = '_' + k
+                    setattr(self, k, v)
         except Exception as e:
             logging.error(e)
     
-    async def get_members(self, requests: False, custom_members: list[int] | None = None):
+    async def get_members(self, requests: bool = False, custom_members: list[int] | None = None):
+        glist: list[User | Member] = []
         for member in (custom_members if custom_members is not None else (self.requests if requests else self.members_id)):
             try:
-                glist.append(await (deps.main_guild.fetch_member(member)))
+                glist.append(await deps.main_guild.fetch_member(member))
             except:
                 continue
         return glist
@@ -201,16 +208,28 @@ class Group:
                 ui.TextDisplay('Ниже представлен список запросов на вступление в вашу организацию'),
                 ui.ActionRow(
                     ui.StringSelect(
-                        plsceholder='Принять заявку',
-                        custom_id='Group accept request ' + str (self.id),
+                        placeholder='Принять заявку',
+                        custom_id='Group accept request ' + str(self.id),
                         options=options
-                    ),
+                    )
+                ),
+                ui.ActionRow(
                     ui.StringSelect(
                         placeholder='Отклонить заявку',
-                        custom_id='Group reject request' + str(self.id),
+                        custom_id='Group reject request ' + str(self.id),
                         options=options
                     )
                 )
+            )
+        ] if options else [
+            ui.Container(
+                ui.TextDisplay('# ' + self.name),
+                ui.Separator(),
+                ui.Section(
+                    ui.TextDisplay('Запросов на вступление больше нет'),
+                    accessory=ui.Button(label='Вернуться', custom_id='Group view ' + str(self.id))
+                )
+                
             )
         ]
     
@@ -278,7 +297,7 @@ class Group:
     def requests(self, value: list[int]):
         try:
             with deps.interactive as connect:
-                self._members_id = value
+                self._requests = value
                 cursor = connect.cursor()
                 cursor.execute("""
                                UPDATE groups 
