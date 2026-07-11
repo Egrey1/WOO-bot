@@ -2,6 +2,7 @@ from disnake.ext.commands import Cog, command, Context, Bot
 from disnake import Embed, ButtonStyle, MessageFlags, MessageInteraction
 from disnake import ui
 from . import objects
+import logging
 
 class InteractiveEvents(Cog):
     def __init__(self, bot: Bot):
@@ -41,7 +42,63 @@ class InteractiveEvents(Cog):
         ep = objects.EventPlayer(ctx.author.id)
         ep.tags = list(set(ep.tags + ['enabled']))
 
-        await ctx.author.send(components=[self.construct_container()], flags=MessageFlags(is_components_v2=True))
+        if objects.Config.get('stage') == 1:
+            await ctx.author.send(components=[self.construct_container()], flags=MessageFlags(is_components_v2=True))
+        elif objects.Config.get('stage') == 2:
+            if ep.group:
+                return await ctx.author.send(components= await ep.group.get_v2_info(ep.group.leader_id == ctx.author.id), flags=MessageFlags(is_components_v2=True))
+            else:
+                all_groups = objects.Group.all()
+                if all_groups:
+                    view = ui.View()
+                    options = {}
+                    for group in all_groups:
+                        options[group.name] = str(group.id)
+                    sl = ui.StringSelect(placeholder='Выберите подпольную организацию для вступления', options=options)
+                    sl.callback= self.sl_callback
+                    button = ui.Button(label='Создать свою организацию', custom_id='Group create')
+                    view.add_item(sl)
+                    view.add_item(button)
+                    await ctx.author.send(embed=Embed(
+                        title='Доступные организации',
+                        description='\n'.join([group.name for group in all_groups])
+                    ), view=view)
+                else:
+                    await ctx.send(components=[
+                        ui.Container(
+                            ui.TextDisplay('Доступных группировок нет'), 
+                            ui.ActionRow(
+                                ui.Button(label='Создать свою организацию', custom_id='Group create')
+                            )
+                        )
+                    ], flags=MessageFlags(is_components_v2=True))
+                    
+    async def sl_callback(self, interaction: MessageInteraction):
+        data = interaction.values[0]
+        author_id = interaction.author.id
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                                SELECT *
+                                FROM groups
+                                WHERE requests LIKE ?
+                """, ('%' + str(author_id) + '%', ))
+                fetch = cursor.fetchone()
+                if not fetch:
+                    Group(int(data)).requests += [author_id]
+                    await ctx.send('Ваш запрос отправлен!')
+                else:
+                    await ctx.send('Вы уже отправляли запрос. Дождитесь ответа от лидера группировки')
+        except Exception as e:
+            logging.error(e)
+        
+    async def create_callback(self, interaction: ModalInteraction):
+        group = Group.create(interaction.text_values['group_name'])
+        group.edit(leader_id=interaction.author.id)
+        group.members_id += [interaction.author.id]
+        await interaction.message.edit(components= await group.get_v2_info(True))
+        await interaction.response.send('Успешно создано!')
     
     @command('interactive_event')
     async def event_interactive(self, ctx: Context):
@@ -85,6 +142,49 @@ class InteractiveEvents(Cog):
             return await ctx.send('Этап изменить невозможно. Если хотите отключить интерактив используйте !interactive_change. Текущий этап: ' + str(current_stage))
         objects.Config.set('stage', current_stage - 1)
         await ctx.send('Этап изменен. Текущий этап: ' + str(current_stage - 1))
+    
+    @Cog.listener('on_button_click')
+    async def group_handler(self, interaction: MessageInteraction):
+        data = interaction.data.custom_id
+        if data.split()[0] != 'Group':
+            return
+        
+        data_splited = data.split()
+        if data_splited[1] == 'create':
+            modal = ui.Modal(label='Название группы')
+            modal.add_item(ui.TextInput(
+                label='Введите название',
+                max_length=64,
+                custom_id='group_name'
+            ))
+            await interaction.response.send_modal(modal=modal)
+            
+        if data_splited[1] == 'requests':
+            group = objects.Group(int(data_splited[2]))
+            if group.leader_id != interaction.author.id:
+                return await interaction.response.send_message('Вы не являетесь владельцем этой подпольной организации', ephemeral=True)
+            
+    @Cog.listener('on_interaction')
+    async def group_dropdowns(self, interaction: MessageInteraction):
+        data = interaction.data.custom_id
+        if data.split()[0] != 'Group':
+            return
+            
+        data_splited = data.split()
+        if (data_splited[1] in ('accept', 'reject')) and (data_splted[2] == 'request'):
+            group = objects.Group(int(data_splited[3]))
+            if group.leader_id != interaction.author.id:
+                return await interaction.response.send_message('Вы не являетесь владельцем этой подпольной организации', ephemeral=True)
+            member_id = int(interaction.values[0])
+            group.requests = [member for member in group.requests if member != member_id]
+            if data_splited[1] == 'accept':
+                group.members_id += [member_id]
+                member = await group.get_members(custom_members=[member_id])[0]
+                await member.send(components= await group.get_v2_info())
+                await member.send('Ваша заявка была принята!')
+            else:
+                member = await group.get_members(custom_members=[member_id])[0]
+                await member.send('Ваша заявка, к сожалению, была отклонена!')
     
     @Cog.listener('on_button_click')
     async def vote_handler(self, interaction: MessageInteraction):

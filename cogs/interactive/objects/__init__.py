@@ -1,5 +1,6 @@
 import dependencies as deps
 import logging
+from disnake import ui, ButtonStyle, SelectOption
 
 class Vote:
     def __init__(self, name: str):
@@ -117,6 +118,7 @@ class Group:
                 self._members_id: list[int] = [int(i) for i in str(fetch['members']).split(';')]
                 self._tags: list[str] = str(fetch['tags']).split(';')
                 self._upgrades: list[str] = str(fetch['upgrades']).split(';') if fetch['upgrades'] else []
+                self._requests: list[int] = [int(i) for i in str(fetch['requests']).split(';')] if fetch['requests'] else []
         except Exception as e:
             logging.error(e)
             
@@ -137,6 +139,81 @@ class Group:
         except Exception as e:
             logging.error(e)
     
+    async def get_members(self, requests: False, custom_members: list[int] | None = None):
+        for member in (custom_members if custom_members is not None else (self.requests if requests else self.members_id)):
+            try:
+                glist.append(await (deps.main_guild.fetch_member(member)))
+            except:
+                continue
+        return glist
+    
+    async def get_v2_info(self, leader_mode: bool = False):
+        if leader_mode:
+            return [
+                ui.Container(
+                    ui.Section(
+                        ui.TextDisplay('# ' + self.name),
+                        accessory=ui.Button(label='Изменить', custom_id='Group edit name ' + str(self.id))
+                    ),
+                    ui.Separator(),
+                    ui.TextDisplay('Лидер: ' + '<@' + str(self.leader_id) + '>'),
+                    ui.TextDisplay('Уровень: ' + str(self.level)),
+                    ui.TextDisplay('Участники: ' + ', '.join([(member.mention + ' (' + member.display_name + ')') for member in (await self.get_members())])),
+                    ui.Separator(),
+                    (
+                        ui.Section(
+                            ui.TextDisplay('Есть заявки на вступление'),
+                            accessory=ui.Button(label='Рассмотреть', custom_id='Group requests ' + str(self.id))
+                        ) if self.requests else ui.TextDisplay('Заявок на вступление нет')
+                    )
+                ),
+                ui.ActionRow(
+                    ui.Button(label='Удалить', custom_id='Group ask delete ' + str(self.id), style=ButtonStyle.danger)
+                )
+            ]
+        return [
+            ui.Container(
+                ui.TextDisplay('# ' + self.name),
+                ui.Separator(),
+                ui.TextDisplay('Лидер: ' + '<@' + str(self.leader_id) + '>'),
+                ui.TextDisplay('Уровень: ' + str(self.level)),
+                ui.TextDisplay('Участники: ' + ', '.join([(member.mention + ' (' + member.display_name + ')') for member in (await self.get_members())])),
+                ui.Separator(),
+                (
+                    ui.TextDisplay('Есть заявки на вступление') if self.requests else ui.TextDisplay('Заявок на вступление нет')
+                )
+            )
+        ]
+    
+    async def get_requests_menu(self):
+        options = [
+                    SelectOption(
+                        label=member.display_name,
+                        description=member.name,
+                        value=str(member.id)
+                    )
+                    for member in (await self.get_members(True))
+        ]
+        return [
+            ui.Container(
+                ui.TextDisplay('# ' + self.name),
+                ui.Separator(),
+                ui.TextDisplay('Ниже представлен список запросов на вступление в вашу организацию'),
+                ui.ActionRow(
+                    ui.StringSelect(
+                        plsceholder='Принять заявку',
+                        custom_id='Group accept request ' + str (self.id),
+                        options=options
+                    ),
+                    ui.StringSelect(
+                        placeholder='Отклонить заявку',
+                        custom_id='Group reject request' + str(self.id),
+                        options=options
+                    )
+                )
+            )
+        ]
+    
     @property
     def members_id(self): return self._members_id
 
@@ -145,6 +222,9 @@ class Group:
         
     @property
     def upgrades(self): return self._upgrades
+        
+    @property
+    def requests(self): return self._requests
 
     @members_id.setter
     def members_id(self, value: list[int]):
@@ -189,6 +269,22 @@ class Group:
                                SET upgrades = ?
                                WHERE id = ?
                                """, (';'.join(self._upgrades), self.id))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(e)
+            
+    @requests.setter
+    def requests(self, value: list[int]):
+        try:
+            with deps.interactive as connect:
+                self._members_id = value
+                cursor = connect.cursor()
+                cursor.execute("""
+                               UPDATE groups 
+                               SET requests = ?
+                               WHERE id = ?
+                               """, (';'.join(str(i) for i in self._requests), self.id))
                 connect.commit()
                 cursor.close()
         except Exception as e:
@@ -265,7 +361,7 @@ class EventPlayer:
                 cursor.execute("""
                                SELECT name 
                                FROM votes
-                               WHeRE votes LIKE ?
+                               WHERE votes LIKE ?
                                """, ('%' + str(self.id) + '%', ))
                 fetch = cursor.fetchone()
                 self.vote: Vote | None = Vote(fetch['name']) if fetch else None
