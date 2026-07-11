@@ -36,10 +36,10 @@ class InteractiveEvents(Cog):
     
     @command('интерактив')
     async def interactive(self, ctx: Context):
-        ep = objects.EventPlayer(ctx.author.id)
-        ep.tags = list(set(ep.tags + ['enabled']))
         if not bool(objects.Config.get('started')):
             return await ctx.send('На данный момент никаких событий нет')
+        ep = objects.EventPlayer(ctx.author.id)
+        ep.tags = list(set(ep.tags + ['enabled']))
 
         await ctx.author.send(components=[self.construct_container()], flags=MessageFlags(is_components_v2=True))
     
@@ -66,8 +66,28 @@ class InteractiveEvents(Cog):
         objects.Config.set('started', int(not pos))
         await ctx.send('Интерактив ' + ('запущен!' if not pos else 'остановлен!'))
     
+    @command('interactive_next_stage')
+    async def next_stage(self, ctx: Context):
+        if (ctx.author.id != 820595582027956247) and (ctx.author.id != 642766756699570196):
+            return
+        current_stage = int(objects.Config.get('stage'))
+        if current_stage >= 2:
+            return await ctx.send('Этап изменить невозможно. Дальнешие элементы не разработаны. Текущий этап: ' + str(current_stage))
+        objects.Config.set('stage', current_stage + 1)
+        await ctx.send('Этап изменен. Текущий этап: ' + str(current_stage + 1))
+        
+    @command('interactive_prev_stage')
+    async def prev_stage(self, ctx: Context):
+        if (ctx.author.id != 820595582027956247) and (ctx.author.id != 642766756699570196):
+            return
+        current_stage = int(objects.Config.get('stage'))
+        if current_stage <= 1:
+            return await ctx.send('Этап изменить невозможно. Если хотите отключить интерактив используйте !interactive_change. Текущий этап: ' + str(current_stage))
+        objects.Config.set('stage', current_stage - 1)
+        await ctx.send('Этап изменен. Текущий этап: ' + str(current_stage - 1))
+    
     @Cog.listener('on_button_click')
-    async def button_handler(self, interaction: MessageInteraction):
+    async def vote_handler(self, interaction: MessageInteraction):
         data = interaction.data.custom_id
         if data.split()[0] != 'Vote':
             return
