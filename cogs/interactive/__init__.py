@@ -172,8 +172,25 @@ class InteractiveEvents(Cog):
             await interaction.message.edit(components=await group.get_v2_info(group.leader_id == interaction.author.id))
             await interaction.response.defer(with_message=False)
         
-        else:
-            await interaction.response.send_message('Пока не готово!', ephemeral=True)
+        elif data_splited[1] == 'edit':
+            if data_splited[2] == 'name':
+                modal = modals.EditGroup(objects.Group(int(data_splited[3])))
+                await interaction.response.send_modal(modal)
+        
+        elif data_splited[1] == 'ask':
+            if data_splited[2] == 'delete':
+                group = objects.Group(int(data_splited[3]))
+                await interaction.message.edit(components= await group.get_v2_info(True, False)) 
+                await interaction.response.defer(with_message=False)
+        
+        elif data_splited[1] == 'delete':
+            objects.Group(int(data_splited[2])).delete()
+            try:
+                await interaction.message.delete()
+            except:
+                pass
+            await interaction.response.send_message('Успешно удалено', ephemeral=True)
+            
             
     @Cog.listener('on_interaction')
     async def group_dropdowns(self, interaction: MessageInteraction):

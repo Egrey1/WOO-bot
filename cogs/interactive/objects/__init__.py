@@ -145,6 +145,20 @@ class Group:
         except Exception as e:
             logging.error(e)
     
+    def delete(self):
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               DELETE
+                               FROM groups
+                               WHERE id = ?
+                               """, (self.id, ))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(e)
+
     async def get_members(self, requests: bool = False, custom_members: list[int] | None = None):
         glist: list[User | Member] = []
         for member in (custom_members if custom_members is not None else (self.requests if requests else self.members_id)):
@@ -154,7 +168,7 @@ class Group:
                 continue
         return glist
     
-    async def get_v2_info(self, leader_mode: bool = False):
+    async def get_v2_info(self, leader_mode: bool = False, ask_delete: bool = True):
         if leader_mode:
             return [
                 ui.Container(
@@ -175,7 +189,26 @@ class Group:
                     )
                 ),
                 ui.ActionRow(
-                    ui.Button(label='Удалить', custom_id='Group ask delete ' + str(self.id), style=ButtonStyle.danger)
+                    *(
+                        [
+                            ui.Button(
+                                label='Удалить', 
+                                custom_id='Group ask delete ' + str(self.id), 
+                                style=ButtonStyle.danger
+                            )
+                        ] if ask_delete else 
+                        [
+                            ui.Button(
+                                label='Вы уверены?',
+                                custom_id='Group delete ' + str(self.id),
+                                style=ButtonStyle.danger
+                            ),
+                            ui.Button(
+                                label='Нет, не уверены',
+                                custom_id='Group view ' + str(self.id)
+                            )
+                        ]
+                    )
                 )
             ]
         return [
