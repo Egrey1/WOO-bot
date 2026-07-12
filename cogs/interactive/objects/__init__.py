@@ -2,6 +2,50 @@ import dependencies as deps
 import logging
 from disnake import Member, User, ui, ButtonStyle, SelectOption
 
+class Task:
+    def __init__(self, id_: int):
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                              SELECT *
+                              FROM tasks
+                              WHERE id = ?
+                """, (id_, ))
+                fetch = cursor.fetchone()
+                if not fetch: raise ValueError('Not found Task')
+                self.id = id_
+                self.name: str = fetch['name']
+                self.description: str = fetch['description'] or None
+                self.level: int = fetch['level']
+                self.group: 'Group' | None = None
+        except Exception as e:
+            logging.error(e)
+    
+    @classmethod
+    def all(cls) -> 'list[Task]':
+        try:
+            with deps.interactive as connect:
+              cursor = connect.cursor()
+              cursor.execute("""
+                            SELECT id
+                            from tasks
+              """)
+              fetches = cursor.fetchall()
+              return [cls(int(fetch['id']) for fetch in fetches)]
+        except Exception as e:
+          logging.error(e)
+    
+    def get_v2_info(self, complete_button: bool = False):
+        return [
+            ui.Container (
+                ui.TextDisplay('# ' + self.name),
+                ui.Separator(),
+                ui.TextDisplay(self.description),
+                ui.Button(label='Завершить задание', disabled= (self.group is None) and (not complete_button), custom_id=('Task complete ' + str(self.group.id)) if self.group is not None else '')
+            )
+        ]
+          
 class Vote:
     def __init__(self, name: str):
         self.name = name
@@ -119,6 +163,7 @@ class Group:
                 self._tags: list[str] = str(fetch['tags']).split(';') if fetch['tags'] else []
                 self._upgrades: list[str] = str(fetch['upgrades']).split(';') if fetch['upgrades'] else []
                 self._requests: list[int] = [int(i) for i in str(fetch['requests']).split(';')] if fetch['requests'] else []
+                self._task: Task | None = Task(fetch['task']) if fetch['task'] else None
         except Exception as e:
             logging.error(e)
             
@@ -186,6 +231,15 @@ class Group:
                             ui.TextDisplay('Есть заявки на вступление'),
                             accessory=ui.Button(label='Рассмотреть', custom_id='Group requests ' + str(self.id))
                         ) if self.requests else ui.TextDisplay('Заявок на вступление нет')
+                    ),
+                    (
+                        ui.Section(
+                            ui.TextDisplay('Доступно задание: **' + self.task.name + '**'),
+                            accessory=ui.Button(label='Просмотреть', custom_id='Task view ' + str(self.task.id))
+                        )  if self.task is not None else ui.Section (
+                            ui.TextDisplay('Задание недоступно'),
+                            accessory=ui.Button(label='Выбрать', custom_id='Task choice ' + str(self.id))
+                        )
                     )
                 ),
                 ui.ActionRow(
@@ -221,6 +275,15 @@ class Group:
                 ui.Separator(),
                 (
                     ui.TextDisplay('Есть заявки на вступление') if self.requests else ui.TextDisplay('Заявок на вступление нет')
+                ),
+                (
+                    ui.Section(
+                        ui.TextDisplay('Доступно задание: **' + self.task.name + '**'),
+                        accessory=ui.Button(label='Просмотреть', custom_id='Task view ' + str(self.task.id))
+                    )  if self.task is not None else ui.Section (
+                        ui.TextDisplay('Задание недоступно'),
+                        accessory=ui.Button(label='Просмотреть', disabled=True)
+                    )
                 )
             )
         ]
@@ -277,6 +340,25 @@ class Group:
         
     @property
     def requests(self): return self._requests
+
+    @property
+    def task(self): return self._task
+    
+    @task.setter
+    def task(self, value):
+        try:
+            self._task = value
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                              UPDATE groups
+                              SET tags = ?
+                              WHERE id = ?
+                """, (value, self.id))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(e)
 
     @members_id.setter
     def members_id(self, value: list[int]):
