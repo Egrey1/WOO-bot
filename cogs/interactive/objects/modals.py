@@ -1,7 +1,8 @@
-from disnake import ModalInteraction, ui
+from disnake import CategoryChannel, ForumChannel, MediaChannel, Message, ModalInteraction, ui
 import dependencies as deps
 from . import Group
 import logging
+import datetime as dt
 
 class CreateGroupModal(ui.Modal):
     def __init__(self):
@@ -62,3 +63,60 @@ class EditGroup(ui.Modal):
         self.group.edit(name=name)
         if interaction.message: await interaction.message.edit(components= await self.group.get_v2_info(True))
         await interaction.response.send_message('Успешно изменено!', ephemeral=True)
+
+class GiveLink(ui.Modal):
+    def __init__(self, group: Group):
+        super().__init__(title='Использование первой способности', components=ui.TextInput(
+            label='Ссылка',
+            placeholder='Введите ссылку на сообщение Эрнесто с уведомлением об откате',
+            custom_id='message_link'
+        ))
+        self.group = group
+
+    async def callback(self, interaction: ModalInteraction):
+        link = interaction.text_values['message_link'].split('/')
+        try:
+            mes_id, channel_id = int(link[-1]), int(link[-2])
+            channel = await deps.main_guild.fetch_channel(channel_id)
+        except:
+            return await interaction.response.send_message('Неверный формат ссылки!', ephemeral=True)
+        message: Message | None = None
+        if isinstance(channel, ForumChannel) or isinstance(channel, MediaChannel):
+            for thread in channel.threads:
+                try:
+                    message = await thread.fetch_message(mes_id)
+                    break
+                except:
+                    pass
+        elif isinstance(channel, CategoryChannel):
+            pass
+        else:
+            try:
+                message = await channel.fetch_message(mes_id)
+            except:
+                message = None
+        
+        if message is None:
+            return await interaction.response.send_message('Вы указали неверную ссылку', ephemeral=True)
+        
+        if message.author.id != 642766756699570196:
+        # if message.author.id != 820595582027956247:
+            return await interaction.response.send_message('Автором должен быть обязательно Эрнесто, иначе ничего не удастся', ephemeral=True)
+
+        if not message.content.lower().startswith('# откат'):
+            return await interaction.response.send_message('Это не сообщение об откате. Нам нельзя удалять все подряд', ephemeral=True)
+        
+        try:
+            ch = message.channel
+            await message.delete()
+            message = await ch.send('### Этот откат был откачен партизанской группировкой `' + self.group.name + '`! Ура! Ура! Ура!', delete_after=600)
+            await interaction.response.send_message('Отлично! Все прошло хорошо! Вы молодцы ' + message.jump_url + f'\nВ следующий раз вы сможете повторить <t:{int((60 * 60 * 2) + dt.datetime.now().timestamp())}:R>')
+            d = self.group.last_use_ability
+            d[1] = dt.datetime.now()
+            self.group.last_use_ability = d
+        
+        except Exception as e:
+            await interaction.response.send_message('Что-то помешало мне удалить сообщение. Это ужасно.', ephemeral=True)
+            logging.error(e)
+
+

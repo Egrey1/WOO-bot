@@ -1,5 +1,5 @@
 from disnake.ext.commands import Cog, command, Context, Bot
-from disnake import Embed, ButtonStyle, MessageFlags, MessageInteraction, ModalInteraction
+from disnake import Colour, Embed, ButtonStyle, Member, MessageFlags, MessageInteraction, ModalInteraction, components
 from disnake import ui
 from . import objects
 from .objects import modals
@@ -139,6 +139,49 @@ class InteractiveEvents(Cog):
             return await ctx.send('Этап изменить невозможно. Дальнешие элементы не разработаны. Текущий этап: ' + str(current_stage))
         objects.Config.set('stage', current_stage + 1)
         await ctx.send('Этап изменен. Текущий этап: ' + str(current_stage + 1))
+        if (current_stage + 1) == 2:
+            await ctx.send('Идет отправка сообщений...')
+            players = await objects.Group.get_members(None, custom_members= objects.EventPlayer.all_ids()) # type: ignore
+            components = [
+                ui.Container(
+                    ui.TextDisplay('Эй! Я должен кое-что рассказать. Эти выборы... Липовые. То есть это все нЕправда. Сегодня победит Эрнесто, а продолжения голосования не будет'),
+                    ui.Separator(),
+                    ui.TextDisplay('Ты должен испортить ему жизнь, а я тебе в этом помоГу'),
+                    ui.Separator(),
+                    ui.TextDisplay('Только один ты не спРавишься. Ты должен объединиться вмЕсте с другими революционерами в подпольные группировки. Я помогу с организацией'),
+                    ui.Separator(),
+                    ui.Separator(),
+                    ui.TextDisplay('Благодря этому всему вы сможете забирать у Эрнесто деньги, мешать ему инвентарь, в целом мешать ему и, мое любимое, откатывать его откаты!'),
+                    ui.Separator(),
+                    ui.TextDisplay('Самое время, я думаю, начинать. Панель управления открывается командоЙ **!интерактив**')
+                ),
+                ui.Container(
+                    ui.TextDisplay('# Этап первый'),
+                    ui.TextDisplay('Откаты и бредоприносилие')
+                )
+            ]
+            form_desc = ''
+            form_error_desc = ''
+            for player in players:
+                try:
+                    await player.send(components=components, flags=MessageFlags(is_components_v2=True))
+                    form_desc += player.display_name + '\n'
+                except:
+                    form_error_desc += player.display_name + '\n'
+            
+            await ctx.send(embeds=[
+                Embed(
+                    title='Успешная отправка',
+                    description=form_desc or 'Отсутствует',
+                    colour=Colour.green()
+                ),
+                Embed(
+                    title='Ошибки',
+                    description=form_error_desc or 'Отсутствуют',
+                    colour=Colour.red()
+                )
+            ])
+        
         
     @command('interactive_prev_stage')
     async def prev_stage(self, ctx: Context):
@@ -191,8 +234,17 @@ class InteractiveEvents(Cog):
             except:
                 pass
             await interaction.response.send_message('Успешно удалено', ephemeral=True)
-            
-            
+        
+        elif data_splited[1] == 'ability':
+            group = objects.Group(int(data_splited[2]))
+            components = objects.Ability.build_container(group, group.leader_id == interaction.author.id) + [
+                ui.ActionRow(
+                    ui.Button(label='Вернуться', custom_id='Group view ' + str(group.id))
+                )
+            ]
+            await interaction.message.edit(components=components)
+
+                 
     @Cog.listener('on_interaction')
     async def group_dropdowns(self, interaction: MessageInteraction):
         data = interaction.data.custom_id
@@ -267,7 +319,6 @@ class InteractiveEvents(Cog):
             group = objects.Group(int(data_splited[2]))
             if group.leader_id != interaction.user.id:
                 return await interaction.response.send_message('Вы не являетесь владельцем этой подпольной организации', ephemeral=True)
-            await interaction.response.defer(with_message=False)
             if not any([tag.split()[0] == 'tasks_randoms' for tag in group.tags]):
                 current_level = group.level + 1
                 tasks = [t for t in objects.Task.all(current_level) if str(t.id) not in group.completed_tasks]
@@ -279,6 +330,7 @@ class InteractiveEvents(Cog):
                     return await interaction.message.edit(components= await group.get_v2_info())
                 if len(tasks) == 0:
                     return await interaction.response.send_message('Вы выполнили все доступные задания! Ожидайте новых', ephemeral=True)
+                await interaction.response.defer(with_message=False)
                 t1 = random.choice(tasks).id
                 tasks = [t for t in tasks if t.id != t1]
                 t2 = random.choice(tasks).id
@@ -294,7 +346,11 @@ class InteractiveEvents(Cog):
                                     ui.TextDisplay('### ' + t1.name),
                                     accessory=ui.Button(label='Выбрать', custom_id='Task choiced ' + str(t1.id) + ' ' + str(group.id))
                                 ),
-                                ui.TextDisplay(t1.description or 'Описание отсутствует'),
+                                ui.TextDisplay(
+                                    (t1.description or 'Описание отсутствует') if 
+                                    len(t1.description or '') < 255 else (
+                                    (t1.description or 'Описание отсутствует')[:253] + '...')
+                                ),
                                 ui.Separator(),
                                 ui.Separator(),
                                 ui.TextDisplay('# ИЛИ'),
@@ -304,12 +360,15 @@ class InteractiveEvents(Cog):
                                     ui.TextDisplay('### ' + t2.name),
                                     accessory=ui.Button(label='Выбрать', custom_id='Task choiced ' + str(t2.id) + ' ' + str(group.id))
                                 ),
-                                ui.TextDisplay(t2.description or 'Описание отсутствует'),
+                                ui.TextDisplay(
+                                    (t2.description or 'Описание отсутствует') if 
+                                    len(t2.description or '') < 255 else (
+                                    (t2.description or 'Описание отсутствует')[:253] + '...')
+                                ),
                             )
                         ]
                     )
             
-        
         elif data_splited[1] == 'choiced':
             task, group = objects.Task(int(data_splited[2])), objects.Group(int(data_splited[3]))
             group.task = task
@@ -350,10 +409,14 @@ class InteractiveEvents(Cog):
                 group.level += 1
                 await interaction.message.delete()
                 if group.level == 1:
-                    view = ui.View()
-                    button = ui.Button(label='Как я могу это сделать?', custom_id='Ask ability 1')
-                    view.add_item(button)
-                    await member.send('Поздравляю! Ваша группа улучшилась. Теперь вы можете откатывать откаты Эрнесто', view=view)
+                    await member.send(components=[
+                        ui.Container(
+                            ui.TextDisplay('Поздравляю! Ваша группа улучшилась. Теперь вы можете откатывать откаты Эрнесто'),
+                            ui.ActionRow(
+                                ui.Button(label='Как я могу это сделать?', custom_id='Group ability ' + str(group.id))
+                            )
+                        )
+                    ], flags=MessageFlags(is_components_v2=True))
                     await interaction.response.send_message('Отправлено!', ephemeral=True)
                 else:
                     await interaction.response.send_message('Для этого уровня ответное сообщение не было прописано. Ответ не отправлен', ephemeral=True)
@@ -380,6 +443,20 @@ class InteractiveEvents(Cog):
             await interaction.response.send_message('Отправлено!', ephemeral=True)
             await interaction.message.delete()
 
+    @Cog.listener('on_button_click')
+    async def abilities_handler(self, interaction: MessageInteraction):
+        data = interaction.data.custom_id
+        if data.split()[0] != 'Ability': return
+
+        data_splited = data.split()
+        if data_splited[1] == 'use':
+            ability = int(data_splited[2])
+            group = objects.Group(int(data_splited[3]))
+            # if ability == 1:
+            modal = modals.GiveLink(group)
+            await interaction.response.send_modal(modal)
+            await interaction.message.edit(components= await group.get_v2_info(True))
+            
             
 
 def setup(bot: Bot):

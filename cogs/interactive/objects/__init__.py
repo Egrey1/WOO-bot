@@ -1,6 +1,32 @@
 import dependencies as deps
 import logging
 from disnake import Member, User, ui, ButtonStyle, SelectOption
+import datetime as dt
+
+class Ability:
+    names = ('## Откаты откатов Эрнесто', )
+    description = ('Бокировка решений Эрнесто об откате РП событий. Он больше не сможет безнаказанно мешать РП кураторам. Его откатом считается любое сообщение, начинающейся с `# Откат` без учета регистра', )
+
+    @staticmethod
+    def build_container(group: 'Group', buttons: bool = False):
+        lvl1_cd = 60 * 60 * 2
+        last_use_1 = group.last_use_ability.get(1, None)
+        subs = dt.datetime.now() - last_use_1 if last_use_1 is not None else None
+        lvl1 = [
+            ui.Section(
+                ui.TextDisplay(Ability.names[0]),
+                accessory=ui.Button(
+                    label='Использовать', 
+                    custom_id='Ability use 1 ' + str(group.id), 
+                    disabled= not (((subs.seconds >= lvl1_cd) if subs is not None else True) and (buttons)))
+            ),
+            ui.TextDisplay(Ability.description[0])
+        ]
+        return [
+            ui.Container(
+                *lvl1 if group.level >= 1 else []
+            )
+        ] if group.level > 0 else []
 
 class Task:
     def __init__(self, id_: int):
@@ -178,6 +204,13 @@ class Group:
                 self._requests: list[int] = [int(i) for i in str(fetch['requests']).split(';')] if fetch['requests'] else []
                 self._task: Task | None = Task(fetch['task']) if fetch['task'] else None
                 self._completed_tasks: list[str] = str(fetch['completed_tasks']).split(';') if fetch['completed_tasks'] else []
+                self._last_use_ability: dict[int, dt.datetime] = {}
+                if fetch['last_use_ability']:
+                    for kv in str(fetch["last_use_ability"]).split(';'):
+                        k, v = kv.split(':')[0], ''.join(kv.split(':')[1:])
+                        k = int(k)
+                        v = dt.datetime.fromisoformat(v)
+                        self._last_use_ability[k] = v
                 if self._task:
                     self._task.group = self
         except Exception as e:
@@ -253,10 +286,17 @@ class Group:
                             ui.TextDisplay('Доступно задание: **' + self.task.name + '**'),
                             accessory=ui.Button(label='Посмотреть', custom_id='Task view ' + str(self.task.id) + ' ' + str(self.id))
                         )  if self.task is not None else ui.Section (
-                            ui.TextDisplay('Задание недоступно'),
+                            ui.TextDisplay('Задание не выбрано'),
                             accessory=ui.Button(label='Выбрать', custom_id='Task choice ' + str(self.id))
                         )
-                    )
+                    ),
+                    *([ui.Section(
+                        ui.TextDisplay('Посмотреть способности'),
+                        accessory=ui.Button(
+                            label='Посмотреть', 
+                            custom_id='Group ability ' + str(self.id), 
+                            disabled= not bool(Ability.build_container(self)))
+                    )] if self.level > 0 else [])
                 ),
                 ui.ActionRow(
                     *(
@@ -300,7 +340,14 @@ class Group:
                         ui.TextDisplay('Задание недоступно'),
                         accessory=ui.Button(label='Посмотреть', disabled=True)
                     )
-                )
+                ),
+                *([ui.Section(
+                    ui.TextDisplay('Посмотреть способности'),
+                    accessory=ui.Button(
+                        label='Посмотреть', 
+                        custom_id='Group ability ' + str(self.id), 
+                        disabled= not bool(Ability.build_container(self)))
+                )] if self.level > 0 else [])
             )
         ]
     
@@ -361,6 +408,9 @@ class Group:
     def completed_tasks(self): return self._completed_tasks
 
     @property
+    def last_use_ability(self): return self._last_use_ability
+
+    @property
     def task(self): return self._task
 
     @property
@@ -414,6 +464,25 @@ class Group:
                               SET task = ?
                               WHERE id = ?
                 """, (value.id if value else None, self.id))
+                connect.commit()
+                cursor.close()
+        except Exception as e:
+            logging.error(e)
+    
+    @last_use_ability.setter
+    def last_use_ability(self, value: dict[int, dt.datetime]):
+        try:
+            with deps.interactive as connect:
+                self._last_use_ability = value
+                items = []
+                for k, v in value.items():
+                    items.append(str(k) + ':' + v.isoformat())
+                cursor = connect.cursor()
+                cursor.execute("""
+                               UPDATE groups
+                               SET last_use_ability = ?
+                               WHERE id = ?
+                               """, (';'.join(items), self.id))
                 connect.commit()
                 cursor.close()
         except Exception as e:
@@ -608,6 +677,22 @@ class EventPlayer:
                 """, (';'.join(self._global_tags), ))
         except Exception as e:
             logging.error(e)
+    
+    @staticmethod
+    def all_ids() -> list[int]:
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute(r"""
+                               SELECT *
+                               FROM players
+                               WHERE tags LIKE '%enabled%'
+                               """)
+                fetches = cursor.fetchall()
+                return [int(fetch['player_id']) for fetch in fetches]
+        except Exception as e:
+            logging.warning(e)
+            return []
 
 
 class Config:
