@@ -13,6 +13,7 @@ VERSION: str
 MAIN_GUILD_ID: int
 main_guild: Guild
 test_mode: bool
+egrey: Member
 
 MAIN_CURRENCY_SYMVOL: str
 MAIN_CURRENCY_ID: int

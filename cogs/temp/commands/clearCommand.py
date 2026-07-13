@@ -1,4 +1,4 @@
-from ..library import Context, Cog, command, asyncio
+from ..library import Context, Cog, command, asyncio, DMChannel
 
 class Clear(Cog):
     @command(name='clear', aliases=['очистить'], description='Очистить чат') # type: ignore
@@ -8,9 +8,10 @@ class Clear(Cog):
             await ctx.send('Выберите целевое сообщение для удаления или введите общее количество удаляемых сообщений')
             return
         
-        if not (ctx.author.guild_permissions.manage_messages or ctx.author.guild_permissions.administrator): # type: ignore
-            await ctx.send('У вас нет прав на использование этой команды')
-            return
+        if not isinstance(ctx.channel, DMChannel):
+            if not (ctx.author.guild_permissions.manage_messages or ctx.author.guild_permissions.administrator): # type: ignore
+                await ctx.send('У вас нет прав на использование этой команды')
+                return
         
         if amount:
             async for message in ctx.channel.history(limit=amount):
@@ -18,8 +19,10 @@ class Clear(Cog):
                     await message.delete()
                     await asyncio.sleep(0.5)
                 except:
-                    await ctx.send('Не удалось удалить сообщения! Была вызвана неизвестная ошибка')
-                    return
+                    if not isinstance(ctx.channel, DMChannel):
+                        await ctx.send('Не удалось удалить сообщения! Была вызвана неизвестная ошибка')
+                        return
+                    continue
             await ctx.send('Сообщения были успешно удалены! ' + f'({amount})')
             return
         if target_message_id:
@@ -32,8 +35,11 @@ class Clear(Cog):
                     if flag2:
                         id_ = message.id
                         if message.id != target_message_id:
-                            await message.delete()
-                            counter += 1
+                            try:
+                                await message.delete()
+                                counter += 1
+                            except:
+                                pass
                         if id_ == target_message_id:
                             flag = True
                             break
@@ -41,7 +47,7 @@ class Clear(Cog):
                     else:
                         flag2 = True
                 if flag:
-                    await mes.edit('Сообщения были успешно удалены! ' + f'({amount})')
+                    await mes.edit('Сообщения были успешно удалены! ' + f'({counter})')
                 else:
                     await mes.edit('По какой-то причине целевое сообщение не было удалено. Вероятно, что история слишком длинная и сработало ограничение на удаления. Попробуйте еще раз вызвать эту команду')
             except:
