@@ -24,7 +24,7 @@ def first_config():
     deps.TOKEN = getenv('TOKEN')
     deps.test_mode = bool(getenv('test_mode'))
     deps.MAIN_CURRENCY_ID = 1
-    deps.VERSION = '2.40.5 Добавление новых объектов интерактива. Task'
+    deps.VERSION = '2.40.6 Добавлена механики заданий'
     
     deps.interactive = sql.connect('data/interactive.db', check_same_thread=False)
     deps.interactive.row_factory = sql.Row
@@ -65,6 +65,10 @@ async def second_config():
         deps.main_guild = await deps.bot.fetch_guild(deps.MAIN_GUILD_ID)
     except:
         logging.warning('Основной сервер получить не удалось')
+    try:
+        deps.egrey = await deps.main_guild.fetch_member(820595582027956247)
+    except:
+        logging.warning('Егрея получить не удалось')
     import cogs as _
     logging.info(f'Бот успешно запущен как {deps.bot.user}')
     logging.info(f'Количество загруженных когов/расширений: {len(deps.bot.cogs)}')

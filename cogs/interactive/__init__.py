@@ -5,6 +5,7 @@ from . import objects
 from .objects import modals
 import logging
 import dependencies as deps
+import random
 
 class InteractiveEvents(Cog):
     def __init__(self, bot: Bot):
@@ -241,6 +242,145 @@ class InteractiveEvents(Cog):
                     pass
             await interaction.message.edit(components=[self.construct_container(False)])
 
+    @Cog.listener('on_button_click')
+    async def tasks_handler(self, interaction: MessageInteraction):
+        data = interaction.data.custom_id
+        if data.split()[0] != 'Task':
+            return
+        data_splited = data.split()
+
+        if data_splited[1] == 'view':
+            task = objects.Task(int(data_splited[2]))
+            if len(data_splited) == 4:
+                task.group = objects.Group(int(data_splited[3]))
+            await interaction.message.edit(
+                components=task.get_v2_info(
+                        (task.group is not None) and 
+                        (task.group.leader_id == interaction.author.id)
+                    ) + ([ui.ActionRow(
+                        ui.Button(label='Вернуться', custom_id='Group view ' + str(task.group.id))
+                    )] if task.group else [])
+                )
+            await interaction.response.defer(with_message=False)
+        
+        elif data_splited[1] == 'choice':
+            group = objects.Group(int(data_splited[2]))
+            if group.leader_id != interaction.user.id:
+                return await interaction.response.send_message('Вы не являетесь владельцем этой подпольной организации', ephemeral=True)
+            await interaction.response.defer(with_message=False)
+            if not any([tag.split()[0] == 'tasks_randoms' for tag in group.tags]):
+                current_level = group.level + 1
+                tasks = [t for t in objects.Task.all(current_level) if str(t.id) not in group.completed_tasks]
+                while (len(tasks) == 0) and (current_level != 1):
+                    current_level -= 1
+                    tasks = [t for t in objects.Task.all(current_level) if (str(t.id) not in group.completed_tasks)]
+                if len(tasks) == 1:
+                    group.task = tasks[0]
+                    return await interaction.message.edit(components= await group.get_v2_info())
+                if len(tasks) == 0:
+                    return await interaction.response.send_message('Вы выполнили все доступные задания! Ожидайте новых', ephemeral=True)
+                t1 = random.choice(tasks).id
+                tasks = [t for t in tasks if t.id != t1]
+                t2 = random.choice(tasks).id
+                group.tags += ['tasks_randoms ' + str(t1) + ' ' + str(t2)]
+            for tag in group.tags:
+                if tag.split()[0] == 'tasks_randoms':
+                    t1, t2 = objects.Task(int(tag.split()[1])), objects.Task(int(tag.split()[2]))
+                    return await interaction.message.edit(
+                        components= [ 
+                            ui.Container(
+                                ui.TextDisplay('## Выберите задание'),
+                                ui.Section(
+                                    ui.TextDisplay('### ' + t1.name),
+                                    accessory=ui.Button(label='Выбрать', custom_id='Task choiced ' + str(t1.id) + ' ' + str(group.id))
+                                ),
+                                ui.TextDisplay(t1.description or 'Описание отсутствует'),
+                                ui.Separator(),
+                                ui.Separator(),
+                                ui.TextDisplay('# ИЛИ'),
+                                ui.Separator(),
+                                ui.Separator(),
+                                ui.Section(
+                                    ui.TextDisplay('### ' + t2.name),
+                                    accessory=ui.Button(label='Выбрать', custom_id='Task choiced ' + str(t2.id) + ' ' + str(group.id))
+                                ),
+                                ui.TextDisplay(t2.description or 'Описание отсутствует'),
+                            )
+                        ]
+                    )
+            
+        
+        elif data_splited[1] == 'choiced':
+            task, group = objects.Task(int(data_splited[2])), objects.Group(int(data_splited[3]))
+            group.task = task
+            group.tags = [tag for tag in group.tags if not tag.startswith('tasks_randoms')]
+            await interaction.response.defer(with_message=False)
+            await interaction.message.edit(components= await group.get_v2_info())
+        
+        elif data_splited[1] == 'complete':
+            group = objects.Group(int(data_splited[2]))
+            if not group.task: return
+            await deps.egrey.send(components=(
+                await group.get_v2_info() + group.task.get_v2_info() + [
+                    ui.ActionRow(
+                        ui.Button(
+                            label='Принять выполнение', 
+                            custom_id='Task realcomplete ' + str(group.id), 
+                            emoji='✅', 
+                            style=ButtonStyle.green
+                        ),
+                        ui.Button(
+                            label='Отказать выполнение', 
+                            custom_id='Task reject ' + str(group.id), 
+                            emoji='❎', 
+                            style=ButtonStyle.red
+                        )
+                    )
+                ]
+            ))
+            await interaction.response.send_message('Выполнение вашего задания было отправлено на проверку модерации. Ожидайте ответа!', ephemeral=True)
+        
+        elif data_splited[1] == 'realcomplete':
+            group = objects.Group(int(data_splited[2]))
+            member = (await group.get_members(custom_members=[group.leader_id or 0]))[0]
+            if not group.task: return
+            if group.level < (group.task.level):
+                group.completed_tasks += [str(group.task.id)]
+                group.task = None
+                group.level += 1
+                await interaction.message.delete()
+                if group.level == 1:
+                    view = ui.View()
+                    button = ui.Button(label='Как я могу это сделать?', custom_id='Ask ability 1')
+                    view.add_item(button)
+                    await member.send('Поздравляю! Ваша группа улучшилась. Теперь вы можете откатывать откаты Эрнесто', view=view)
+                    await interaction.response.send_message('Отправлено!', ephemeral=True)
+                else:
+                    await interaction.response.send_message('Для этого уровня ответное сообщение не было прописано. Ответ не отправлен', ephemeral=True)
+            else:
+                group.completed_tasks += [str(group.task.id)]
+                group.task = None
+                group.upgrade_points += 1
+                if group.level < 99:
+                    random_answers = (
+                        'Отлично! Вы молодцы. Выполнение задания, на самом деле, не требовалось, но вы смогли подорвать влияние Эрнесто. Не думайте, что это останется без награды',
+                        'Очень хорошо, я доволен вами. Еще чуть-чуть и мы выведем его из себя, ха-ха! Ваша организация еще недостаточно развита, так что награда вы выполнение побочных заданий придет чуть позже',
+                        'Вы и ваша команда хорошо работает. Влияние Эрнесто с каждым днем подрывается все больше и больше, мы победим. Не думайте, что выполнение побочных заданий вам ничего не даст. Вы еще недостаточно развили свою организацию чтобы ими воспользоваться'
+                    )
+                    await member.send(random.choice(random_answers))
+                    await interaction.response.send_message('Отправлено!', ephemeral=True)
+                    await interaction.message.delete()
+                    return 
+                
+        elif data_splited[1] == 'reject':
+            group = objects.Group(int(data_splited[2]))
+            group.task = None
+            member = (await group.get_members(custom_members=[group.leader_id or 0]))[0]
+            await member.send('К сожалению вы не выполнили свое задание. Выберите новое заново!')
+            await interaction.response.send_message('Отправлено!', ephemeral=True)
+            await interaction.message.delete()
+
+            
 
 def setup(bot: Bot):
     bot.add_cog(InteractiveEvents(bot))
