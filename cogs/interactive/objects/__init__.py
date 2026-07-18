@@ -1,7 +1,80 @@
 import dependencies as deps
 import logging
-from disnake import Member, User, ui, ButtonStyle, SelectOption
+from disnake import Member, TextDisplay, User, ui, ButtonStyle, SelectOption
 import datetime as dt
+
+class Upgrade:
+    def __init__(self, id_: int | str, lvl: int = 1, group: 'Group | None' = None) -> None:
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                               SELECT *
+                               FROM upgrades
+                               WHERE id = ?
+                               """, (id_, ))
+                fetch = dict(cursor.fetchone())
+                self.id: int = fetch['id']
+                self.name: str = fetch['name']
+                self.description: str = fetch['description']
+                self.description_buy: str = fetch['description_buy']
+                self.cost: int = fetch['cost']
+                self.max_lvl: int = fetch['max_lvl']
+                self.group: Group | None = group
+                self.lvl: int = lvl
+        except Exception as e:
+            logging.error(e)
+    
+    @classmethod
+    def all(cls, group: 'Group | None' = None) -> 'list[Upgrade]':
+        try:
+            with deps.interactive as connect:
+                cursor = connect.cursor()
+                cursor.execute("""
+                                SELECT *
+                                FROM upgrades
+                                """)
+                fetches = cursor.fetchall()
+                if group is not None:
+                    upgrades: dict[int, Upgrade] = {}
+                    for fetch in fetches:
+                        upg = cls(fetch['id'])
+                        upg.group = group
+                        upg.lvl = group.upgrades.get(upg.id, 0)
+                        upgrades[upg.id] = upg
+                    group.upgrades = {upg.id: upg.lvl for upg in upgrades.values()}
+                    return list(upgrades.values())
+                return [cls(fetch['id']) for fetch in fetches]
+        except Exception as e:
+            logging.error(e)
+            return []
+    
+
+    @staticmethod
+    def get_v2_info(group: 'Group', buttons: bool = False):
+        cont = []
+        for upgrade in Upgrade.all(group):
+            cont.append(
+                ui.Section(
+                    ui.TextDisplay('## ' + upgrade.name + (r'\*' * upgrade.lvl) + ' — ' +  str(upgrade.cost) + ' *up*'),
+                    accessory=ui.Button( label='Максимальный уровень' if
+                                            (upgrade.lvl >= upgrade.max_lvl) else 
+                                            'Недостаточно up' if (upgrade.cost > group.upgrade_points) else
+                                            'Улучшить',
+                                            custom_id='Group upgrade ' + str(group.id) + ' ' + str(upgrade.id),
+                                            disabled=(upgrade.lvl >= upgrade.max_lvl) or (upgrade.cost > group.upgrade_points) or (not buttons))
+                )
+            )
+            cont.append(ui.TextDisplay(upgrade.description))
+            cont.append(ui.Separator())
+        return [
+            ui.Container (
+                ui.TextDisplay('# Текущие очки улучшений: ' + str(group.upgrade_points) + ' *up*'),
+                ui.Separator(),
+                *cont
+            )
+        ]
+
 
 class Ability:
     names = ('## Откаты откатов Эрнесто', )
@@ -20,11 +93,31 @@ class Ability:
                     custom_id='Ability use 1 ' + str(group.id), 
                     disabled= not (((subs.seconds >= lvl1_cd) if subs is not None else True) and (buttons)))
             ),
-            ui.TextDisplay(Ability.description[0])
+            ui.TextDisplay(Ability.description[0]),
+            ui.Separator()
         ]
+        # lvl2 = [
+        #     ui.Section(
+        #         ui.TextDisplay(
+
+        #         )
+        #     )
+        # ]
+        upgs = []
+        if group.upgrades.get(1, 0) > 0: # Рассылка от лидера
+            upgrade = Upgrade(1, group.upgrades.get(1, 0))
+            upgs.append(
+                ui.Section(
+                    ui.TextDisplay('## ' + upgrade.name + r'\*' * (upgrade.lvl * (upgrade.lvl != 1))),
+                    accessory=ui.Button(label='Написать сообщение', custom_id='Upgrade use ' + str(group.id) + ' ' + str(upgrade.id))
+                )
+            )
+            upgs.append(ui.TextDisplay(upgrade.description_buy))
+            upgs.append(ui.Separator())
         return [
             ui.Container(
-                *lvl1 if group.level >= 1 else []
+                *lvl1 if group.level >= 1 else [],
+                *upgs
             )
         ] if group.level > 0 else []
 
@@ -200,7 +293,8 @@ class Group:
                 self._upgrade_points: int = fetch['upgrade_points']
                 self._members_id: list[int] = [int(i) for i in str(fetch['members']).split(';')] if fetch['members'] else []
                 self._tags: list[str] = str(fetch['tags']).split(';') if fetch['tags'] else []
-                self._upgrades: list[str] = str(fetch['upgrades']).split(';') if fetch['upgrades'] else []
+                self._upgrades: dict[int, int] = {int(upg.split()[0]): int(upg.split()[1]) for upg in str(fetch['upgrades']).split(';')} if fetch['upgrades'] else {}
+                """id, lvl"""
                 self._requests: list[int] = [int(i) for i in str(fetch['requests']).split(';')] if fetch['requests'] else []
                 self._task: Task | None = Task(fetch['task']) if fetch['task'] else None
                 self._completed_tasks: list[str] = str(fetch['completed_tasks']).split(';') if fetch['completed_tasks'] else []
@@ -296,7 +390,15 @@ class Group:
                             label='Посмотреть', 
                             custom_id='Group ability ' + str(self.id), 
                             disabled= not bool(Ability.build_container(self)))
-                    )] if self.level > 0 else [])
+                    )] if self.level > 0 else []),
+                    *(
+                        [
+                            ui.Section(
+                                ui.TextDisplay('Посмотреть улучшения — '),
+                                accessory=ui.Button(label='Доступно — ' + str(self.upgrade_points) + ' up', custom_id='Group upgrades ' + str(self.id))
+                            ) 
+                        ] if self.level > 1 else []
+                    )
                 ),
                 ui.ActionRow(
                     *(
@@ -347,7 +449,22 @@ class Group:
                         label='Посмотреть', 
                         custom_id='Group ability ' + str(self.id), 
                         disabled= not bool(Ability.build_container(self)))
-                )] if self.level > 0 else [])
+                )] if self.level > 0 else []),
+                *(
+                    [
+                        ui.Section(
+                            ui.TextDisplay('Посмотреть улучшения — '),
+                            accessory=ui.Button(label='Доступно — ' + str(self.upgrade_points) + ' *up*', custom_id='Group upgrades ' + str(self.id))
+                        ) 
+                    ] if self.level > 1 else []
+                )
+            ),
+            ui.ActionRow(
+                ui.Button(
+                    label='Покинуть',
+                    style=ButtonStyle.danger,
+                    custom_id='EP leave_group ' + str(self.id)
+                )
             )
         ]
     
@@ -537,16 +654,17 @@ class Group:
             logging.error(e)
 
     @upgrades.setter
-    def upgrades(self, value: list[str]):
+    def upgrades(self, value: dict[int, int]):
         try:
             with deps.interactive as connect:
                 self._upgrades = value
+                form_s = ';'.join([(f'{i} {l}') for i, l in value.items()])
                 cursor = connect.cursor()
                 cursor.execute("""
                                UPDATE groups 
                                SET upgrades = ?
                                WHERE id = ?
-                               """, (';'.join(self._upgrades), self.id))
+                               """, (form_s, self.id))
                 connect.commit()
                 cursor.close()
         except Exception as e:

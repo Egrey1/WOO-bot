@@ -1,6 +1,6 @@
-from disnake import CategoryChannel, ForumChannel, MediaChannel, Message, ModalInteraction, ui
+from disnake import CategoryChannel, ForumChannel, MediaChannel, Message, MessageFlags, ModalInteraction, ui
 import dependencies as deps
-from . import Group
+from . import EventPlayer, Group
 import logging
 import datetime as dt
 
@@ -119,4 +119,40 @@ class GiveLink(ui.Modal):
             await interaction.response.send_message('Что-то помешало мне удалить сообщение. Это ужасно.', ephemeral=True)
             logging.error(e)
 
+class MessageUpg(ui.Modal):
+    def __init__(self, group: Group):
+        super().__init__(
+            title='Отправка рассылки',
+            components=[
+                ui.TextInput(
+                    label='Содержание',
+                    custom_id='message_content',
+                    max_length=512
+                )
+            ]
+        )
+        self.group = group
+    
+    async def callback(self, interaction: ModalInteraction):
+        value = interaction.text_values['message_content']
+        members = await self.group.get_members()
+        components = [
+            ui.Container(
+                ui.TextDisplay('## Сообщение от лидера группировки'),
+                ui.Separator(),
+                ui.Separator(),
+                ui.TextDisplay('```\n' + value + '\n```')
+            )
+        ]
+
+        counter = 0
+        for member in members:
+            if member.id == interaction.author.id: continue
+            try:
+                await member.send(components=components, flags=MessageFlags(is_components_v2=True))
+                counter += 1
+            except:
+                pass
+        
+        await interaction.response.send_message('Успешно отправлено ' + str(counter) + ' участникам вашей организации')
 

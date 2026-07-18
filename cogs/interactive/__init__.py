@@ -157,7 +157,8 @@ class InteractiveEvents(Cog):
                 ),
                 ui.Container(
                     ui.TextDisplay('# Этап первый'),
-                    ui.TextDisplay('Откаты и бредоприносилие')
+                    ui.TextDisplay('Откаты и бредоприносилие'),
+                    spoiler=True
                 )
             ]
             form_desc = ''
@@ -200,34 +201,35 @@ class InteractiveEvents(Cog):
             return
         
         data_splited = data.split()
-        if data_splited[1] == 'create':
+        option = data_splited[1]
+        if option == 'create':
             modal = modals.CreateGroupModal()
             await interaction.response.send_modal(modal=modal)
             
-        elif data_splited[1] == 'requests':
+        elif option == 'requests':
             group = objects.Group(int(data_splited[2]))
             if group.leader_id != interaction.author.id:
                 return await interaction.response.send_message('Вы не являетесь владельцем этой подпольной организации', ephemeral=True)
             await interaction.message.edit(components= await group.get_requests_menu())
             await interaction.response.defer(with_message=False)
         
-        elif data_splited[1] == 'view':
+        elif option == 'view':
             group = objects.Group(int(data_splited[2]))
             await interaction.message.edit(components=await group.get_v2_info(group.leader_id == interaction.author.id))
             await interaction.response.defer(with_message=False)
         
-        elif data_splited[1] == 'edit':
+        elif option == 'edit':
             if data_splited[2] == 'name':
                 modal = modals.EditGroup(objects.Group(int(data_splited[3])))
                 await interaction.response.send_modal(modal)
         
-        elif data_splited[1] == 'ask':
+        elif option == 'ask':
             if data_splited[2] == 'delete':
                 group = objects.Group(int(data_splited[3]))
                 await interaction.message.edit(components= await group.get_v2_info(True, False)) 
                 await interaction.response.defer(with_message=False)
         
-        elif data_splited[1] == 'delete':
+        elif option == 'delete':
             objects.Group(int(data_splited[2])).delete()
             try:
                 await interaction.message.delete()
@@ -235,7 +237,7 @@ class InteractiveEvents(Cog):
                 pass
             await interaction.response.send_message('Успешно удалено', ephemeral=True)
         
-        elif data_splited[1] == 'ability':
+        elif option == 'ability':
             group = objects.Group(int(data_splited[2]))
             components = objects.Ability.build_container(group, group.leader_id == interaction.author.id) + [
                 ui.ActionRow(
@@ -243,8 +245,34 @@ class InteractiveEvents(Cog):
                 )
             ]
             await interaction.message.edit(components=components)
+        
+        elif option == 'upgrade':
+            group = objects.Group(int(data_splited[2]))
+            upgrade = objects.Upgrade(int(data_splited[3]))
+            upgs = group.upgrades
+            upgs[upgrade.id] += 1
+            # upgrade.group = group
+            # upgrade.lvl = group.upgrades[upgrade.id]
+            group.upgrades = upgs
+            await interaction.response.send_message('Успешно улучшено!', ephemeral=True)
+            group.upgrade_points -= min(upgrade.cost, group.upgrade_points)
+            components = objects.Upgrade.get_v2_info(group, group.leader_id == interaction.author.id) + [
+                ui.ActionRow(
+                    ui.Button(label='Вернуться', custom_id='Group view ' + str(group.id))
+                )
+            ]
+            await interaction.message.edit(components=components)
+        
+        elif option == 'upgrades':
+            group = objects.Group(int(data_splited[2]))
+            components = objects.Upgrade.get_v2_info(group, group.leader_id == interaction.author.id) + [
+                ui.ActionRow(
+                    ui.Button(label='Вернуться', custom_id='Group view ' + str(group.id))
+                )
+            ]
+            await interaction.message.edit(components=components)
 
-                 
+
     @Cog.listener('on_interaction')
     async def group_dropdowns(self, interaction: MessageInteraction):
         data = interaction.data.custom_id
@@ -457,7 +485,50 @@ class InteractiveEvents(Cog):
             await interaction.response.send_modal(modal)
             await interaction.message.edit(components= await group.get_v2_info(True))
             
-            
+    @Cog.listener('on_button_click')
+    async def upgrades_handler(self, interaction: MessageInteraction):
+        data = interaction.data.custom_id
+
+        if data.split()[0] != 'Upgrade':
+            return
+        
+        data_splited = data.split()
+        option = data_splited[1]
+
+        if option == 'use':
+            group = objects.Group(int(data_splited[2]))
+            upgrade = data_splited[3]
+            if upgrade == '1':
+                modal = modals.MessageUpg(group)
+                await interaction.response.send_modal(modal)
+
+    @Cog.listener('on_button_click')
+    async def ep_handler(self, interaction: MessageInteraction):
+        data = interaction.data.custom_id
+        if data.split()[0] != 'EP':
+            return
+        
+        data_splited = data.split()
+        option = data_splited[1]
+
+        if option == 'tag_add':
+            ep = objects.EventPlayer(int(data_splited[2]))
+            ep.tags = list(set(ep.tags + [''.join(data_splited[3:])]))
+            await interaction.response.send_message('Операция была выполнена успешно!')
+
+        elif option == 'tag_remove':
+            ep = objects.EventPlayer(int(data_splited[2]))
+            to_rem = ''.join(data_splited[3:])
+            ep.tags = [tag for tag in ep.tags if tag != to_rem]
+            await interaction.response.send_message('Операция была выполнена успешно!')
+        
+        elif option == 'leave_group':
+            group = objects.Group(int(data_splited[2]))
+            group.members_id = [member for member in group.members_id if member != interaction.author.id]
+            await interaction.response.send_message('Вы успешно покинули группу **' + group.name + '**')
+            await interaction.message.delete()
+
+
 
 def setup(bot: Bot):
     bot.add_cog(InteractiveEvents(bot))
