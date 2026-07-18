@@ -252,6 +252,7 @@ class Rights:
         'manage_rincomes',
         'manage_resources',
         'manage_roles',
+        'manage_webhooks',
         'rp_curator',
         'administrator',
     )
@@ -285,7 +286,7 @@ class Rights:
             if count == 0:
                 cursor.execute(
                     """
-                    INSERT INTO rights (manage_items, manage_rincomes, manage_roles, manage_resources, rp_curator, administrator)
+                    INSERT INTO rights (manage_items, manage_rincomes, manage_roles, manage_resources, manage_webhooks, rp_curator, administrator)
                     VALUES ('', '', '', '', '', '')
                     """
                 )
@@ -297,7 +298,7 @@ class Rights:
             cursor = connect.cursor()
             cursor.execute(
                 """
-                SELECT manage_items, manage_rincomes, manage_resources, manage_roles, administrator, rp_curator
+                SELECT manage_items, manage_rincomes, manage_resources, manage_roles, manage_webhooks, administrator, rp_curator
                 FROM rights
                 LIMIT 1
                 """
@@ -425,6 +426,18 @@ class Rights:
     def set_manage_roles(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
         return self.set('manage_roles', role_ids)
 
+    def get_manage_webhooks(self) -> list[int]:
+        return self.get('manage_webhooks')
+
+    def add_manage_webhooks(self, role_id: int) -> list[int]:
+        return self.add('manage_webhooks', role_id)
+
+    def remove_manage_webhooks(self, role_id: int) -> list[int]:
+        return self.remove('manage_webhooks', role_id)
+
+    def set_manage_webhooks(self, role_ids: list[int] | tuple[int, ...]) -> list[int]:
+        return self.set('manage_webhooks', role_ids)
+
     def is_manage_items(self, user: Member) -> bool:
         return any([role.id in self.get_manage_items() for role in user.roles])
     
@@ -442,6 +455,9 @@ class Rights:
     
     def is_rp_curator(self, user: Member) -> bool:
         return any([role.id in self.get_rp_curator() for role in user.roles])
+    
+    def is_manage_webhooks(self, user: Member) -> bool:
+        return any([role.id in self.get_manage_webhooks() for role in user.roles])
 
 
 class Currency(_BaseEntity):

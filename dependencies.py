@@ -316,6 +316,7 @@ class Rights:
     manage_items: list[int]
     manage_rincomes: list[int]
     manage_resources: list[int]
+    manage_webhooks: list[str]
     administrator: list[int]
     fields: tuple[str, ...]
 
@@ -441,6 +442,18 @@ class Rights:
     def set_administrator(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
         """Полностью заменяет поле `administrator`."""
 
+    def get_manage_webhooks(self) -> list[int]: # type: ignore
+        """Возвращает список ролей из поля `manage_webhooks`."""
+
+    def add_manage_webhooks(self, role_id: int) -> list[int]: # type: ignore
+        """Добавляет роль в поле `manage_webhooks`."""
+
+    def remove_manage_webhooks(self, role_id: int) -> list[int]: # type: ignore
+        """Удаляет роль из поля `manage_webhooks`."""
+
+    def set_manage_webhooks(self, role_ids: list[int] | tuple[int, ...]) -> list[int]: # type: ignore
+        """Полностью заменяет поле `manage_webhooks`."""
+
     def get_manage_roles(self) -> list[int]: # type: ignore
         """Возвращает список ролей из поля `manage_roles`."""
 
@@ -482,6 +495,9 @@ class Rights:
 
     def is_rp_curator(self, user: Member) -> bool: # type: ignore
         """Проверяет, имеет ли права user на управление ролями для заработка"""
+    
+    def is_manage_webhooks(self, user: Member) -> bool: # type: ignore
+        """Проверяет, имеет ли права user на создание времхуков"""
 
 class Currency:
     """
