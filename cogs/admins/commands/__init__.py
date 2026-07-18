@@ -4,3 +4,4 @@ from .removeItem import RemoveItem
 from .removeMoney import RemoveMoney
 from .wipe import WipeCommand
 from .removeInv import RemoveInvCommand
+from .temphooks import TempHooks
